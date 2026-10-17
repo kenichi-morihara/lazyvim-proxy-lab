@@ -1,0 +1,26 @@
+#!/usr/bin/env python3
+"""Fetch only locked commits; no GitHub archive or release API requests."""
+import concurrent.futures
+import json
+import os
+from pathlib import Path
+from common import TOOLS, checkout, run
+
+app = os.environ.get("NVIM_APPNAME", "nvim")
+config = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / app
+data = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share")) / app
+if not (config / "init.lua").exists():
+    raise SystemExit("Run editor/scripts/install-config first")
+lock = json.loads((config / "lazy-lock.json").read_text())
+sources = json.loads((TOOLS / "plugins.sources.json").read_text())
+if set(lock) != set(sources):
+    raise SystemExit("Plugin lock and source manifest differ; update them together")
+def install(name):
+    spec = lock[name]
+    dest = checkout(sources[name], spec["commit"], data / "lazy" / name)
+    # Supply branch metadata for lazy.nvim's UI without fetching moving branches.
+    run("git", "-C", dest, "update-ref", "refs/remotes/origin/" + spec["branch"], spec["commit"])
+    run("git", "-C", dest, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/" + spec["branch"])
+with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+    list(executor.map(install, sorted(lock)))
+print("All locked plugins installed. No install hooks or release downloads executed.")

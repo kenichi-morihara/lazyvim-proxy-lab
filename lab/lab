@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+set -euo pipefail
+lab_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+repo_dir=$(dirname -- "$lab_dir")
+runtime="$lab_dir/.runtime"
+compose() { docker compose -f "$lab_dir/compose.yaml" "$@"; }
+ssh_lab() {
+  ssh -i "$runtime/keys/id_ed25519" -o IdentitiesOnly=yes \
+    -o UserKnownHostsFile="$runtime/known_hosts" -o StrictHostKeyChecking=accept-new \
+    -p "${LAB_SSH_PORT:-2222}" developer@127.0.0.1 "$@"
+}
+case "${1:-help}" in
+  up)
+    mkdir -p "$runtime"/{keys,ca,ca-public,images}
+    chmod 700 "$runtime/keys" "$runtime/ca"
+    if [[ ! -f "$runtime/keys/id_ed25519" ]]; then
+      ssh-keygen -q -t ed25519 -N '' -C lazyvim-proxy-lab -f "$runtime/keys/id_ed25519"
+    fi
+    docker build --provenance=false -f "$lab_dir/base.Dockerfile" -t lazyvim-lab-base:locked "$repo_dir"
+    docker build --provenance=false -f "$lab_dir/host/Dockerfile" -t lazyvim-lab-host:locked "$repo_dir"
+    if [[ ! -f "$runtime/images/base.id" ]] || [[ $(docker image inspect -f '{{.Id}}' lazyvim-lab-base:locked) != "$(cat "$runtime/images/base.id")" ]]; then
+      docker save -o "$runtime/images/base.tar" lazyvim-lab-base:locked
+      docker image inspect -f '{{.Id}}' lazyvim-lab-base:locked > "$runtime/images/base.id"
+    fi
+    compose up -d proxy
+    for attempt in $(seq 1 60); do
+      [[ -s "$runtime/ca/mitmproxy-ca-cert.pem" ]] && break
+      sleep 1
+    done
+    cp "$runtime/ca/mitmproxy-ca-cert.pem" "$runtime/ca-public/mitmproxy-ca-cert.pem"
+    compose up -d --wait host ssh-gateway
+    printf '\nReady: %s ssh\n' "$0"
+    ;;
+  ssh) shift; ssh_lab "$@" ;;
+  exec) shift; compose exec -T --user developer host bash -lc "$*" ;;
+  logs) compose logs --tail=100 ;;
+  stop) compose stop ;;
+  down) compose down ;;
+  reset)
+    [[ ${2:-} == --yes ]] || { printf 'Delete lab volumes and generated keys: lab/lab reset --yes\n'; exit 1; }
+    compose down --volumes
+    rm -rf -- "$runtime"
+    ;;
+  *) printf 'Usage: lab/lab {up|ssh [command]|exec command|logs|stop|down|reset --yes}\n' ;;
+esac

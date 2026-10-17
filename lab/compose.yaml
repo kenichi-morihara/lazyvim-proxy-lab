@@ -1,0 +1,53 @@
+name: lazyvim-proxy-lab
+services:
+  proxy:
+    image: mitmproxy/mitmproxy:11.0.2@sha256:92ab9e0626ec73a3abae9c460e5475323f414745d7d0001205c8fa0c77ad31a2
+    entrypoint: mitmdump
+    command: ["--listen-host", "0.0.0.0", "--listen-port", "8080", "--set", "confdir=/home/mitmproxy/.mitmproxy", "--set", "flow_detail=0", "-s", "/policy/policy.py"]
+    volumes:
+      - ./.runtime/ca:/home/mitmproxy/.mitmproxy
+      - ./proxy:/policy:ro
+    networks:
+      restricted:
+        ipv4_address: 10.203.77.2
+      uplink: {}
+  ssh-gateway:
+    image: mitmproxy/mitmproxy:11.0.2@sha256:92ab9e0626ec73a3abae9c460e5475323f414745d7d0001205c8fa0c77ad31a2
+    entrypoint: ["python3", "/gateway.py"]
+    volumes: ["./ssh-gateway.py:/gateway.py:ro"]
+    ports: ["127.0.0.1:${LAB_SSH_PORT:-2222}:2222"]
+    networks: [restricted, uplink]
+    depends_on: [host]
+  host:
+    image: lazyvim-lab-host:locked
+    privileged: true
+    hostname: shared-linux
+    depends_on: [proxy]
+    volumes:
+      - ..:/repo
+      - type: tmpfs
+        target: /repo/lab/.runtime
+      - ./.runtime/ca-public:/lab-ca:ro
+      - ./.runtime/keys/id_ed25519.pub:/lab-keys/id_ed25519.pub:ro
+      - ./.runtime/images:/lab-images:ro
+      - docker-data:/var/lib/docker
+      - host-home:/home/developer
+      - ssh-host-keys:/etc/ssh/keys
+    networks:
+      restricted:
+        ipv4_address: 10.203.77.3
+    healthcheck:
+      test: ["CMD-SHELL", "docker info >/dev/null 2>&1 && test -f /home/developer/.ssh/authorized_keys && pgrep -x sshd >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+networks:
+  restricted:
+    internal: true
+    ipam:
+      config: [{subnet: 10.203.77.0/24}]
+  uplink: {}
+volumes:
+  docker-data: {}
+  host-home: {}
+  ssh-host-keys: {}

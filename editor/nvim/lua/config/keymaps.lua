@@ -1,0 +1,1 @@
+-- LazyVim defaults: Space leader, gd definition, K hover, Space cf format.

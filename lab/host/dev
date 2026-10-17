@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+source /etc/profile.d/lab-proxy.sh
+name=lazyvim-dev
+if [[ ${1:-} == --rebuild ]]; then
+  shift
+  if docker container inspect "$name" >/dev/null 2>&1; then docker rm -f "$name" >/dev/null; fi
+  if docker image inspect lazyvim-dev:locked >/dev/null 2>&1; then docker image rm lazyvim-dev:locked >/dev/null; fi
+fi
+if ! docker image inspect lazyvim-dev:locked >/dev/null 2>&1; then
+  context=$(mktemp -d)
+  trap 'rm -rf "$context"' EXIT
+  cp /repo/lab/devcontainer/Dockerfile "$context/Dockerfile"
+  cp /etc/pki/ca-trust/source/anchors/lab.crt "$context/ca.crt"
+  DOCKER_BUILDKIT=0 docker build --build-arg HTTP_PROXY="${HTTP_PROXY:-}" --build-arg HTTPS_PROXY="${HTTPS_PROXY:-}" --build-arg NO_PROXY="${NO_PROXY:-}" -t lazyvim-dev:locked "$context"
+  rm -rf "$context"
+  trap - EXIT
+fi
+if ! docker container inspect "$name" >/dev/null 2>&1; then
+  docker run -d --name "$name" --hostname devcontainer \
+    --mount type=bind,src=/repo,dst=/workspace \
+    --mount type=tmpfs,dst=/workspace/lab/.runtime \
+    --mount type=volume,src=lazyvim-dev-home,dst=/home/developer \
+    lazyvim-dev:locked
+fi
+if [[ $(docker inspect -f '{{.State.Running}}' "$name") != true ]]; then docker start "$name" >/dev/null; fi
+if [[ $# -gt 0 ]]; then exec docker exec "$name" "$@"; fi
+exec docker exec -it "$name" bash -l

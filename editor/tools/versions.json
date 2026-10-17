@@ -1,0 +1,24 @@
+{
+  "neovim": {
+    "url": "https://github.com/neovim/neovim.git",
+    "revision": "9fa7c0a04638ee3d5fefbdcec347b1c07a5ce9ce",
+    "version": "0.11.5"
+  },
+  "lazy": {
+    "url": "https://github.com/folke/lazy.nvim.git",
+    "revision": "306a05526ada86a7b30af95c5cc81ffba93fef97"
+  },
+  "npm": {
+    "pyright": "1.1.407",
+    "@vtsls/language-server": "0.2.9",
+    "typescript": "5.9.3",
+    "prettier": "3.6.2"
+  },
+  "ruff": "0.14.0",
+  "lpeg": {
+    "url": "https://github.com/neovim/deps.git",
+    "revision": "d495ee6f79e7962a53ad79670cb92488abe0b9b4",
+    "archive": "opt/lpeg-1.1.0.tar.gz",
+    "sha256": "4b155d67d2246c1ffa7ad7bc466c1ea899bbc40fef0257cc9c03cecbaed4352a"
+  }
+}

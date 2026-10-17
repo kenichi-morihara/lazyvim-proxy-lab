@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -uo pipefail
+status=0
+printf 'OS / architecture\n'
+uname -sm
+if [[ -r /etc/os-release ]]; then cat /etc/os-release; fi
+printf '\nTools (missing ones are listed, no installation performed)\n'
+for tool in git cmake ninja cc c++ make python3 node npm rg fd nvim pyright-langserver vtsls ruff prettier; do
+  if command -v "$tool" >/dev/null 2>&1; then printf 'OK      %s: %s\n' "$tool" "$(command -v "$tool")";
+  else printf 'MISSING %s\n' "$tool"; status=1; fi
+done
+if command -v nvim >/dev/null 2>&1; then nvim --version | head -3; fi
+printf '\nProxy / CA configuration (values and credentials are hidden)\n'
+for name in HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy SSL_CERT_FILE REQUESTS_CA_BUNDLE NODE_EXTRA_CA_CERTS PIP_CERT; do
+  if [[ -n ${!name:-} ]]; then printf '%s=set\n' "$name"; else printf '%s=unset\n' "$name"; fi
+done
+printf '\nPermissions\n'
+id
+if command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then printf 'passwordless sudo: yes\n'; else printf 'passwordless sudo: no\n'; fi
+exit "$status"

@@ -1,0 +1,5 @@
+.git
+lab/.runtime
+**/__pycache__
+**/node_modules
+**/.venv

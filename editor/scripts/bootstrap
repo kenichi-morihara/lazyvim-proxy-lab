@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+editor_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+export PATH="${EDITOR_PREFIX:-$HOME/.local}/bin:$PATH"
+"$editor_dir/scripts/install-config" "$@"
+"$editor_dir/tools/build-neovim"
+"$editor_dir/tools/install-language-tools"
+"$editor_dir/tools/install-plugins"
+"$editor_dir/tools/install-parsers"
+"$editor_dir/scripts/doctor"

@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'Git smart HTTPS\n'
+git ls-remote https://github.com/neovim/neovim.git HEAD >/dev/null
+printf 'Package registries\n'
+npm view prettier@3.6.2 version
+python3 -m pip index versions typing_extensions >/dev/null
+sudo -E dnf -q makecache
+printf 'Blocked download paths\n'
+for url in \
+  https://github.com/neovim/neovim/archive/refs/tags/v0.11.5.tar.gz \
+  https://github.com/neovim/neovim/releases/download/v0.11.5/nvim-linux-arm64.tar.gz \
+  https://codeload.github.com/neovim/neovim/tar.gz/refs/tags/v0.11.5 \
+  https://raw.githubusercontent.com/LazyVim/starter/main/init.lua; do
+  headers=$(mktemp)
+  code=$(curl -sS --max-time 20 -D "$headers" -o /dev/null -w '%{http_code}' "$url")
+  [[ "$code" == 403 ]] && grep -qi '^X-Lab-Policy: deny' "$headers"
+  rm -f "$headers"
+done
+printf 'Direct egress must fail\n'
+if curl -kfsS --noproxy '*' --connect-timeout 3 --max-time 5 https://1.1.1.1 >/dev/null 2>&1; then
+  printf 'FAIL: direct internet is reachable\n'; exit 1
+fi
+printf 'PASS network restrictions\n'

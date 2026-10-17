@@ -1,0 +1,34 @@
+#!/usr/bin/env python3
+"""Place this configuration without depending on its checkout location."""
+import argparse
+import os
+from pathlib import Path
+import shutil
+from datetime import datetime
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--copy", action="store_true")
+args = parser.parse_args()
+source = Path(__file__).resolve().parents[1] / "nvim"
+target = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / os.environ.get("NVIM_APPNAME", "nvim")
+if target.is_symlink() and target.resolve() == source and not args.copy:
+    print(f"Already linked: {target}")
+    raise SystemExit(0)
+if not target.is_symlink() and source.resolve() == target.resolve():
+    raise SystemExit("Source and destination are the same; no copy required")
+if args.copy and target.is_dir() and not target.is_symlink():
+    def contents(folder):
+        return {str(p.relative_to(folder)): p.read_bytes() for p in folder.rglob("*") if p.is_file()}
+    if contents(source) == contents(target):
+        print(f"Already copied: {target}")
+        raise SystemExit(0)
+target.parent.mkdir(parents=True, exist_ok=True)
+if target.exists() or target.is_symlink():
+    backup = target.with_name(target.name + ".backup-" + datetime.now().strftime("%Y%m%d-%H%M%S-%f"))
+    target.rename(backup)
+    print(f"Backup: {backup}")
+if args.copy:
+    shutil.copytree(source, target)
+else:
+    target.symlink_to(source, target_is_directory=True)
+print(f"Installed: {target}")

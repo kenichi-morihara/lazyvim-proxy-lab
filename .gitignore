@@ -1,0 +1,7 @@
+.DS_Store
+lab/.runtime/
+__pycache__/
+*.pyc
+node_modules/
+.venv/
+.cache/

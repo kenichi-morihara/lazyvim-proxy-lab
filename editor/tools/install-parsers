@@ -1,0 +1,58 @@
+#!/usr/bin/env python3
+import json
+import os
+from pathlib import Path
+import shutil
+import tempfile
+from common import CACHE, EDITOR, TOOLS, checkout, run
+
+app = os.environ.get("NVIM_APPNAME", "nvim")
+data = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share")) / app
+plugin = data / "lazy/nvim-treesitter"
+if not plugin.exists():
+    raise SystemExit("Run install-plugins first")
+config = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / app
+plugin_lock = json.loads((config / "lazy-lock.json").read_text())
+installed = __import__('subprocess').check_output(["git", "-C", str(plugin), "rev-parse", "HEAD"], text=True).strip()
+if installed != plugin_lock["nvim-treesitter"]["commit"]:
+    raise SystemExit("Parser query version mismatch: run install-plugins")
+out = data / "site/parser"
+out.mkdir(parents=True, exist_ok=True)
+info = data / "site/parser-info"
+info.mkdir(parents=True, exist_ok=True)
+for lang, spec in json.loads((TOOLS / "parsers.lock.json").read_text()).items():
+    stamp = info / (lang + ".revision")
+    if stamp.exists() and stamp.read_text().strip() == spec["revision"] and (out / (lang + ".so")).exists():
+        continue
+    repo = checkout(spec["url"], spec["revision"], CACHE / "parsers" / lang)
+    src = repo / spec.get("location", "") / "src"
+    if not (src / "parser.c").exists():
+        raise SystemExit(f"Pinned {lang} has no generated parser.c")
+    with tempfile.TemporaryDirectory() as tmp:
+        obj = Path(tmp) / "parser.o"
+        run(os.environ.get("CC", "cc"), "-O2", "-fPIC", "-I", src, "-c", src / "parser.c", "-o", obj)
+        objects = [obj]
+        linker = os.environ.get("CC", "cc")
+        for ext in ("c", "cc"):
+            scanner = src / ("scanner." + ext)
+            if scanner.exists():
+                linker = os.environ.get("CXX", "c++") if ext == "cc" else linker
+                scanner_obj = Path(tmp) / ("scanner_" + ext + ".o")
+                run(linker, "-O2", "-fPIC", "-I", src, "-c", scanner, "-o", scanner_obj)
+                objects.append(scanner_obj)
+        target = out / (lang + ".so")
+        run(linker, "-shared", *objects, "-o", str(target) + ".tmp")
+        Path(str(target) + ".tmp").replace(target)
+    stamp.write_text(spec["revision"] + "\n")
+# Include inherited query groups (e.g. ecma) as well as the installed languages.
+queries = data / "site/queries"
+queries.mkdir(parents=True, exist_ok=True)
+for source in (plugin / "runtime/queries").iterdir():
+    if source.is_dir():
+        target = queries / source.name
+        if target.is_symlink():
+            target.unlink()
+        elif target.exists():
+            shutil.rmtree(target)
+        shutil.copytree(source, target)
+print("Parsers and matching highlight queries installed")

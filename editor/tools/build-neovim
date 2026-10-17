@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+"""Build Neovim and dependencies using Git transport only."""
+import hashlib
+import os
+from pathlib import Path
+import re
+import shutil
+import tarfile
+from common import CACHE, PREFIX, JOBS, VERSIONS, checkout, run
+
+spec = VERSIONS["neovim"]
+source = checkout(spec["url"], spec["revision"], CACHE / "neovim")
+stamp = PREFIX / "share/editor-neovim-revision"
+if stamp.exists() and stamp.read_text().strip() == spec["revision"] and (PREFIX / "bin/nvim").exists():
+    print("Pinned Neovim already installed")
+    raise SystemExit(0)
+# CMake's offline build consumes these existing source directories.
+srcdir = source / ".deps/build/src"
+srcdir.mkdir(parents=True, exist_ok=True)
+needed = {"libuv", "luajit", "unibilium", "luv", "lua_compat53", "utf8proc", "treesitter",
+          "treesitter_c", "treesitter_lua", "treesitter_vim", "treesitter_vimdoc", "treesitter_query", "treesitter_markdown"}
+for line in (source / "cmake.deps/deps.txt").read_text().splitlines():
+    parts = line.split()
+    if len(parts) != 2 or not parts[0].endswith("_URL"):
+        continue
+    name = parts[0][:-4].lower()
+    if name not in needed:
+        continue
+    match = re.fullmatch(r"(https://github.com/[^/]+/[^/]+)/archive/(.+)\.tar\.gz", parts[1])
+    if not match:
+        raise SystemExit(f"Unrecognized dependency source: {name}")
+    url, ref = match.groups()
+    # Resolve immutable versions in the committed manifest, never moving tags at install time.
+    lock = __import__('json').loads((Path(__file__).parent / "sources.lock.json").read_text())
+    checkout(url + ".git", lock[name], srcdir / name)
+# LPeg's official source archive lives inside a pinned Git repository.
+lpeg = VERSIONS["lpeg"]
+repo = checkout(lpeg["url"], lpeg["revision"], CACHE / "lpeg-git")
+archive = repo / lpeg["archive"]
+if hashlib.sha256(archive.read_bytes()).hexdigest() != lpeg["sha256"]:
+    raise SystemExit("LPeg archive checksum mismatch")
+if not (srcdir / "lpeg/lptree.c").exists():
+    with tarfile.open(archive) as tf:
+        # Trusted pinned archive; reject traversal before extraction (Python 3.9 compatible).
+        for entry in tf.getmembers():
+            target = (srcdir / entry.name).resolve()
+            if not str(target).startswith(str(srcdir.resolve()) + os.sep) or entry.issym() or entry.islnk():
+                raise SystemExit("Unsafe archive member")
+        tf.extractall(srcdir)
+    shutil.move(str(srcdir / "lpeg-1.1.0"), str(srcdir / "lpeg"))
+env = dict(os.environ, CMAKE_BUILD_PARALLEL_LEVEL=JOBS, MAKEFLAGS=f"-j{JOBS}")
+run("cmake", "-S", source / "cmake.deps", "-B", source / ".deps", "-G", "Ninja", "-DUSE_EXISTING_SRC_DIR=ON", env=env)
+run("cmake", "--build", source / ".deps", "--parallel", JOBS, env=env)
+run("cmake", "-S", source, "-B", source / "build", "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release", f"-DCMAKE_INSTALL_PREFIX={PREFIX}", env=env)
+run("cmake", "--build", source / "build", "--parallel", JOBS, env=env)
+run("cmake", "--install", source / "build", env=env)
+stamp.parent.mkdir(parents=True, exist_ok=True)
+stamp.write_text(spec["revision"] + "\n")
+run(PREFIX / "bin/nvim", "--version")

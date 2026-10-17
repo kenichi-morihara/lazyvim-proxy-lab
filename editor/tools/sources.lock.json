@@ -1,0 +1,15 @@
+{
+  "libuv": "8fb9cb919489a48880680a56efecff6a7dfb4504",
+  "luajit": "538a82133ad6fddfd0ca64de167c4aca3bc1a2da",
+  "unibilium": "bfcb0350129dd76893bc90399cf37c45812268a2",
+  "luv": "657a08fefcfe72bdabe90b63984c1b39dbcf75a4",
+  "lua_compat53": "7af7bf7e0db3c9d88881fdf10d880a6e2ab1d095",
+  "utf8proc": "a1b99daa2a3393884220264c927a48ba1251a9c6",
+  "treesitter_c": "7fa1be1b694b6e763686793d97da01f36a0e5c12",
+  "treesitter_lua": "4569d1c361129e71a205b94a05e158bd71b1709f",
+  "treesitter_vim": "3dd4747082d1b717b8978211c06ef7b6cd16125b",
+  "treesitter_vimdoc": "9f6191a98702edc1084245abd5523279d4b681fb",
+  "treesitter_query": "8a43889f89fd0667289936341bff3a77bafade17",
+  "treesitter_markdown": "afaa4138517363362f54c89330c9d79391e81168",
+  "treesitter": "bf655c0beaf4943573543fa77c58e8006ff34971"
+}

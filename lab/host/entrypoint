@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cp /lab-ca/mitmproxy-ca-cert.pem /etc/pki/ca-trust/source/anchors/lab.crt
+update-ca-trust
+install -d -m 700 -o developer -g developer /home/developer/.ssh
+install -m 600 -o developer -g developer /lab-keys/id_ed25519.pub /home/developer/.ssh/authorized_keys
+if [[ ! -s /etc/ssh/keys/ssh_host_ed25519_key ]]; then
+  ssh-keygen -q -t ed25519 -N '' -f /etc/ssh/keys/ssh_host_ed25519_key
+fi
+# Shells reached over SSH do not inherit the service's environment automatically.
+cat > /etc/profile.d/lab-proxy.sh <<'ENV'
+export HTTP_PROXY=http://10.203.77.2:8080 HTTPS_PROXY=http://10.203.77.2:8080
+export http_proxy=$HTTP_PROXY https_proxy=$HTTPS_PROXY
+export NO_PROXY=localhost,127.0.0.1 no_proxy=localhost,127.0.0.1
+export SSL_CERT_FILE=/etc/pki/tls/certs/ca-bundle.crt
+export REQUESTS_CA_BUNDLE=$SSL_CERT_FILE NODE_EXTRA_CA_CERTS=$SSL_CERT_FILE PIP_CERT=$SSL_CERT_FILE
+export PATH="$HOME/.local/bin:$PATH"
+ENV
+set -a
+source /etc/profile.d/lab-proxy.sh
+set +a
+dockerd --host=unix:///var/run/docker.sock --storage-driver=overlay2 > /var/log/dockerd.log 2>&1 &
+docker_pid=$!
+ssh_pid=''
+trap 'kill ${ssh_pid:-} "$docker_pid" 2>/dev/null || true; wait || true' EXIT
+for attempt in $(seq 1 90); do
+  if docker info >/dev/null 2>&1; then break; fi
+  kill -0 "$docker_pid" || { cat /var/log/dockerd.log; exit 1; }
+  sleep 1
+done
+docker info >/dev/null
+if [[ $(docker image inspect -f '{{.Id}}' lazyvim-lab-base:locked 2>/dev/null || true) != "$(cat /lab-images/base.id)" ]]; then
+  docker load -i /lab-images/base.tar
+fi
+/usr/sbin/sshd -D -e -h /etc/ssh/keys/ssh_host_ed25519_key &
+ssh_pid=$!
+wait -n "$docker_pid" "$ssh_pid"

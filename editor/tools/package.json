@@ -1,0 +1,11 @@
+{
+  "name": "lazyvim-editor-tools",
+  "private": true,
+  "version": "1.0.0",
+  "dependencies": {
+    "pyright": "1.1.407",
+    "@vtsls/language-server": "0.2.9",
+    "typescript": "5.9.3",
+    "prettier": "3.6.2"
+  }
+}
