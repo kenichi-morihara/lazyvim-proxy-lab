@@ -1,6 +1,6 @@
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not (vim.uv or vim.loop).fs_stat(lazypath) then
-  vim.api.nvim_echo({ { "Run editor/tools/install-plugins before starting Neovim.", "ErrorMsg" } }, true, {})
+  vim.api.nvim_echo({ { "Run make in the configuration checkout before starting Neovim.", "ErrorMsg" } }, true, {})
   return
 end
 vim.opt.rtp:prepend(lazypath)

@@ -14,7 +14,7 @@ return {
       -- Install parsers explicitly with tools/install-parsers, never with TSInstall/TSUpdate.
       for _, cmd in ipairs({ "TSInstall", "TSUpdate" }) do
         vim.api.nvim_create_user_command(cmd, function()
-          vim.notify("Use editor/tools/install-parsers (Git transport, pinned revisions)", vim.log.levels.WARN)
+          vim.notify("Run make in the configuration checkout (Git transport, pinned parsers)", vim.log.levels.WARN)
         end, { nargs = "*", force = true })
       end
       local function attach(buf)

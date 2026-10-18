@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+# Prefer the current Python when suitable; discover versioned commands on Linux.
+if [[ -n ${PYTHON:-} ]]; then
+  candidates=("$PYTHON")
+else
+  candidates=(python3 python3.11 python3.12 python3.13 python3.14 python3.15)
+fi
+for candidate in "${candidates[@]}"; do
+  if command -v "$candidate" >/dev/null 2>&1 && \
+    "$candidate" -c 'import sys; sys.exit(sys.version_info < (3, 11))' 2>/dev/null; then
+    export PYTHON="$candidate"
+    exec "$candidate" -u "$script_dir/_installer.py" "$@"
+  fi
+done
+printf 'MISSING: Python 3.11+ with venv/pip (set PYTHON to its executable if needed).\n' >&2
+printf 'Install it using the package configuration for this environment, then rerun make.\n' >&2
+exit 1

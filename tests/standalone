@@ -5,7 +5,7 @@ scratch=$(mktemp -d)
 trap 'rm -rf "$scratch"' EXIT
 cp -a "$repo_dir/editor" "$scratch/editor"
 export XDG_CONFIG_HOME="$scratch/config"
-"$scratch/editor/scripts/bootstrap" --copy
+make -C "$scratch/editor" COPY=1
 # Moving the installers must not break a copied configuration.
 mv "$scratch/editor" "$scratch/moved-editor"
 [[ ! -L "$XDG_CONFIG_HOME/${NVIM_APPNAME:-nvim}" ]]

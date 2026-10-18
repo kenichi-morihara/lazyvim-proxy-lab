@@ -10,46 +10,52 @@ Gitによるソース取得とローカルビルドを使う、Python・TSX向�
 lab/           proxy、SSH先Linux、入れ子Docker
 editor/nvim/   ~/.config/nvim に置く設定とlazy-lock.json
 editor/tools/  本体・依存・言語ツール・parserの導入とlock
-editor/scripts/ 設定配置、bootstrap、doctor
+editor/scripts/ Makeから呼び出す導入・診断処理
 examples/      Python・TSXのサンプル（型エラーを意図的に含む）
 tests/         通信制限・LSP・構文解析・整形・配置の検証
 ```
 
 ## 既存のLinux / dev containerへ導入する
 
-導入対象のLinux環境（SSH先または既存のdev container）に入ってから作業します。この手順では`editor/`だけを使います。Docker、`lab/lab up`、検証用proxy・CAの導入は不要です。
-
-### 1. リポジトリを取得する
-
-Gitの認証が必要な場合は、利用環境の認証方法を事前に設定してください。
+導入対象のLinux環境（SSH先または既存のdev container）で、clone後に`make`を実行します。`editor/`だけを導入するため、Dockerやローカル検証用環境の起動は不要です。
 
 ```bash
 git clone https://github.com/kenichi-morihara/lazyvim-proxy-lab.git \
   "$HOME/lazyvim-proxy-lab"
 cd "$HOME/lazyvim-proxy-lab"
-export PATH="$HOME/.local/bin:$PATH"
+make
 ```
 
-利用環境で提供されているproxy・CA設定を引き継ぎ、TLS証明書の検証を有効にしたまま利用します。Git、OSパッケージ、npm、pipの取得先が利用可能であることを確認してください。接続先、証明書のパス、認証情報など、環境固有の値はこのリポジトリに保存しません。
+Gitの認証が必要な場合は、利用環境の認証方法を事前に設定してください。proxy・CA設定も利用環境で提供されているものを引き継ぎ、TLS証明書の検証を有効にしたまま利用します。接続先や認証情報など、環境固有の値はこのリポジトリに保存しません。
 
-### 2. 必要なツールを確認する
+### 通常使うコマンド
 
-```bash
-./editor/scripts/doctor
-```
+| コマンド | 動作 |
+|---|---|
+| `make` / `make install` | 事前確認 → 必要なら本体ビルド → 設定・言語ツール・プラグイン・parser導入 → 起動確認 |
+| `make doctor` | 導入前の依存確認だけ。インストールや通信は行わない |
 
-`doctor`はインストールを行わず、ツールの有無と配置先、Neovimのバージョン、proxy・CA関連の環境変数の設定有無を表示します。初回はNeovimや言語ツールが`MISSING`になり、終了コード1を返す場合があります。これらは後続の手順で導入します。診断結果にはユーザー名やローカルパスも含まれるため、結果を共有する場合は内容を確認してください。
+`make`は事前確認も実行するので、先に`make doctor`を実行する必要はありません。確認だけしたい場合に使ってください。
 
-必要なツールは次のとおりです。
+- PATH上の**Neovim 0.11.5（LuaJIT付き）**を自動的に再利用します。見つからない場合やバージョンが異なる場合は、固定版をユーザー領域へビルドします。
+- Neovimや言語ツールが未導入でも、`doctor`ではエラーにしません。これから導入するためのOS依存だけを確認します。
+- 必要な依存が不足していれば、その名前を表示して設定変更前に停止します。依存を用意して同じ`make`を再実行してください。
+- 導入が途中で失敗した場合も、原因を解消して`make`を再実行できます。本体・parserのビルド情報と取得済みソースを再利用し、同じ設定の配置ではバックアップを増やしません。
+- 最後に外部ツールの有無、LazyVimの起動、Python/TSXのparserとハイライトqueryをローカルで確認します。プロジェクト固有の依存はインストールしません。
+
+### OS依存が不足していた場合
 
 | 用途 | 必要なもの |
 |---|---|
-| 取得・展開 | Git 2.19以上、tar、gzip、unzip、CA証明書 |
-| 本体・parserのビルド | C/C++コンパイラ、CMake、Ninja、Make、gettext |
-| 言語ツール | Python 3.11以上とvenv/pip、Node.js 22とnpm |
+| 入口・取得・展開 | Bash、Make、Git 2.19以上、tar、gzip、unzip、CA証明書 |
+| parserのビルド | C/C++コンパイラ |
+| Neovim本体のビルド時のみ | CMake、Ninja、gettext（`msgfmt`） |
+| 言語ツール | Python 3.11以上とvenv/pip、Node.js 22以降とnpm（検証済みは22） |
 | ファイル・全文検索 | ripgrep、fd |
 
-Neovim本体を再利用する場合も、Tree-sitter parser用のC/C++コンパイラは必要です。以下は、OSパッケージを管理できるRocky Linux 9の開発用コンテナ向けの例です。ほかのOSや、あらかじめ用意された開発イメージでは、利用環境のパッケージ構成に合わせてください。
+Python 3.11以上は、`python3`または`python3.11`などの実行名から自動検出します。Python自体がない場合も、必要なバージョンを表示して停止します。
+
+以下は、OSパッケージを管理できるRocky Linux 9の開発用コンテナ向けの例です。ほかのOSや既存の開発イメージでは、利用環境のパッケージ構成に合わせてください。
 
 ```bash
 sudo dnf install -y dnf-plugins-core epel-release
@@ -59,70 +65,30 @@ sudo dnf install -y git cmake ninja-build gcc gcc-c++ make gettext \
   python3.11 python3.11-pip nodejs npm ripgrep fd-find tar gzip unzip ca-certificates
 ```
 
-OS依存の追加に管理者権限が必要な場合は、環境を管理する担当者に必要なツールの提供を依頼してください。以降の設定・本体・言語ツールの導入は一般ユーザーで実行します。
+必要なOS依存を追加する権限がない場合は、環境を管理する担当者に提供を依頼してください。`make`による導入は一般ユーザーで実行し、OSパッケージの追加やリポジトリ設定の変更は行いません。
 
-この例ではvenv作成に`python3.11`を使います。別のPython 3.11以上を使う場合は、`PYTHON`をその実行コマンドに変更してください。
+### 配置先と任意の指定
 
-```bash
-export PYTHON=python3.11
-```
+設定は既定で`~/.config/nvim`へリンクし、既存の設定は日時付きでバックアップします。リンク先として使うリポジトリはその場所に保持してください。コピー配置を使う場合は`make COPY=1`を実行します。
 
-### 3. Neovim本体の有無に合わせて導入する
+| 指定例 | 用途 |
+|---|---|
+| `make COPY=1` | 設定をシンボリックリンクではなくコピーで配置 |
+| `make BUILD_JOBS=1` | 本体・依存のビルド並列数を変更（既定2） |
+| `make PYTHON=python3.12` | 使用するPython 3.11以上を明示 |
+| `make EDITOR_PREFIX="$HOME/.local/editor"` | 本体・言語ツールの配置先を変更（既定`~/.local`） |
 
-**AとBのどちらか一方を実行します。** 通常起動時にツールをインストールする設定ではないため、ここで初回導入を完了させます。
+`EDITOR_BUILD_CACHE`でビルドキャッシュを変更でき、設定・プラグイン・parserはXDGディレクトリと`NVIM_APPNAME`に対応します。配置先やコピー指定は、再実行時も同じ値を使ってください。
 
-#### A. 既存のNeovimを使う
+本体をビルドする場合、配置先にある`nvim`が置き換わることがあります。言語ツールの導入は同名の既存実行ファイルの上書きを拒否します。
 
-```bash
-command -v nvim
-nvim --version
-```
-
-この構成で検証済みのNeovimは**0.11.5、LuaJIT付き**です。そのNeovimをPATHから実行できる場合は、本体のビルドを省き、以下を実行します。他のバージョンでの互換性は別途確認してください。
-
-```bash
-./editor/scripts/install-config
-./editor/tools/install-language-tools
-./editor/tools/install-plugins
-./editor/tools/install-parsers
-```
-
-#### B. Neovim本体から導入する
-
-Neovimが未導入の場合、または固定バージョンをユーザー領域に導入する場合は、一括実行の`bootstrap`を使います。Aのコマンドを追加で実行する必要はありません。
-
-```bash
-./editor/scripts/bootstrap
-```
-
-`bootstrap`は「設定配置 → Neovimビルド → 言語ツール → プラグイン → parser → 診断」の順に実行します。本体と依存のビルド並列数は既定で2です。
-
-#### 配置先と既存設定
-
-- 設定は既定で`~/.config/nvim`へシンボリックリンクを作成します。既存の設定は日時付きでバックアップします。リンク先として使うリポジトリは、その場所に保持してください。
-- コピー配置を使う場合、Aでは最初のコマンドを`./editor/scripts/install-config --copy`に、Bでは`./editor/scripts/bootstrap --copy`に置き換えます。
-- 本体・言語ツールの配置先は既定で`~/.local`です。本体を導入するBでは、この配置先にある`nvim`が置き換わる場合があります。言語ツールの導入は、同名の既存実行ファイルの上書きを拒否します。
-- `EDITOR_PREFIX`で本体・言語ツールの配置先、`EDITOR_BUILD_CACHE`でビルドキャッシュ、`BUILD_JOBS`でビルド並列数を変更できます。設定・プラグイン・parserはXDGディレクトリと`NVIM_APPNAME`に対応します。
-
-`EDITOR_PREFIX`を変更する場合は初回導入前に設定し、その`bin`をPATHの先頭へ追加してください。`bootstrap`は設定済みの`EDITOR_PREFIX`に対応します。
-
-### 4. 導入結果を確認する
-
-```bash
-command -v nvim
-nvim --version
-./editor/scripts/doctor
-```
-
-既定の配置先を使う場合は、利用するシェルの設定ファイル（例: `~/.bashrc`、`~/.zshrc`）にも次の1行を一度だけ追加します。
+`make`の内部では配置先の`bin`をPATHへ追加します。新しいシェルでも使えるよう、シェルの設定ファイル（例: `~/.bashrc`、`~/.zshrc`）に一度だけ次の設定を追加してください。`EDITOR_PREFIX`を指定した場合は、その配置先の`bin`に合わせます。シェルの設定ファイルは自動編集しません。
 
 ```bash
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
-作業対象のプロジェクトのディレクトリへ移動し、`nvim .`で開きます。Pythonのプロジェクト依存はそのプロジェクトのvenvに、TSXの依存はそのプロジェクトのパッケージ管理方法で導入してください。言語ツールの導入用venvとは別に管理します。
-
-動作確認用のコードと基本操作は[Python・TSXを試す](#python-tsx)を参照してください。
+作業対象のプロジェクトへ移動し、`nvim .`で開きます。Pythonの依存はそのプロジェクトのvenvに、TSXの依存はそのプロジェクトのパッケージ管理方法で導入してください。動作確認用コードと基本操作は[Python・TSXを試す](#python-tsx)を参照してください。
 
 ### 取得とバージョン固定
 
@@ -144,7 +110,7 @@ export PATH="$HOME/.local/bin:$PATH"
 # 以下はSSH先
 dev
 # 以下はdev container内（一般ユーザー）
-./editor/scripts/bootstrap
+make
 nvim examples/python/app.py
 # TSXの例は後述のサンプル依存導入後に開く
 ```
