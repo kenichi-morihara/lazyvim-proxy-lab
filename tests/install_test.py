@@ -107,6 +107,30 @@ prefix.mkdir(parents=True, exist_ok=True)
         self.assertEqual(self.stages(), [])
         self.assertEqual(before, set(self.home.rglob('*')))
 
+    def test_optional_tailscale_setup_does_not_require_or_install_editor_tools(self):
+        for name in ('git', 'node', 'npm', 'cc', 'c++', 'rg', 'fd', 'cmake', 'ninja', 'msgfmt'):
+            (self.bin / name).unlink()
+        self.tool('tailscale', 'exit 0\n')
+        self.tool('tailscaled', 'exit 0\n')
+        (self.editor / 'scripts/tailscale-local').write_text('''import os, sys
+with open(os.environ['TEST_LOG'], 'a') as log: log.write(' '.join(sys.argv[1:]) + '\\n')
+''')
+        for standalone in (False, True):
+            with self.subTest(standalone=standalone):
+                if self.log.exists(): self.log.unlink()
+                result = self.run_make('setup-tailscale', standalone=standalone)
+                self.assertEqual(result.returncode, 0, result.stdout)
+                self.assertEqual(self.stages(), ['start', 'up --accept-dns=false'])
+                self.assertEqual(list(self.home.iterdir()), [])
+
+    def test_optional_tailscale_setup_reports_missing_package_without_editor_changes(self):
+        result = self.run_make('setup-tailscale')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('tailscale, tailscaled', result.stdout)
+        self.assertIn('rerun make setup-tailscale', result.stdout)
+        self.assertEqual(self.stages(), [])
+        self.assertEqual(list(self.home.iterdir()), [])
+
     def test_missing_prerequisite_stops_before_config_or_helpers(self):
         (self.bin / 'npm').unlink()
         config = self.home / '.config/nvim'

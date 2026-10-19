@@ -24,14 +24,17 @@ sudo dnf install tailscale
 
 Tailscaleは任意のOSパッケージとして扱い、`make`やNeovim起動時にはインストールしません。上の操作にはパッケージ管理権限が必要です。[公式RPM導入手順](https://pkgs.tailscale.com/stable/)
 
-リポジトリのルートから、一般ユーザーで専用daemonを起動します。
+リポジトリのルートから、一般ユーザーで任意のsetupを実行します。`editor/`だけをコピーした場合も同じターゲットを使えます。
 
 ```bash
-./editor/scripts/tailscale-local start
-./editor/scripts/tailscale-local up --accept-dns=false
+make setup-tailscale
 ```
 
-表示された認証URLをWindowsのブラウザーで開き、Macと同じユーザーでログインします。WindowsにTailscaleを入れる必要はありません。`editor/`だけをコピーした場合は`./scripts/tailscale-local`を使います。
+このターゲットはTailscale実行ファイルの確認 → 専用daemonの起動・再利用 → `up --accept-dns=false`によるログインを行います。Neovim本体や言語ツールの導入とは独立しているため、接続を始めたいときにだけ実行できます。通常の`make` / `make install` / `make doctor`からは呼びません。TailscaleのOSパッケージがなければ、上記の導入手順を案内して停止します。
+
+表示された認証URLをWindowsのブラウザーで開き、Macと同じユーザーでログインします。WindowsにTailscaleを入れる必要はありません。
+
+起動とログインを個別に操作する場合は`./editor/scripts/tailscale-local start`、`./editor/scripts/tailscale-local up --accept-dns=false`を使えます。`editor/`だけをコピーした場合は`./scripts/tailscale-local`です。
 
 このdaemonはuserspaceモードなので`sudo`、`/dev/net/tun`、追加のコンテナ権限を使いません。DNSを変更する設定やSSHサーバーの有効化も行いません。[userspaceモード](https://tailscale.com/docs/concepts/userspace-networking)
 

@@ -10,6 +10,9 @@ Leaderキーは **Space** です。Spaceを押して少し待つとwhich-keyが�
 | `i` / `a` | カーソルの前 / 後から入力 |
 | `o` / `O` | 下 / 上に行を追加 |
 | `Esc` | ノーマルモードに戻る |
+| 挿入中のShift＋矢印 / マウスドラッグ | 文字を選択（Selectモード） |
+| Selectモードの`Ctrl+C` | 選択範囲を接続元へコピー。選択は維持 |
+| Selectモードで文字入力 | 選択範囲を入力した文字で置き換え |
 | `u` / `Ctrl-r` | 元に戻す / やり直す |
 | `yy` / `dd` / `p` | Neovim内で行をコピー / 削除 / 貼り付け |
 | `v`で選択して`Space y` | 選択範囲をWindowsなど接続元のクリップボードへコピー |
@@ -72,8 +75,11 @@ Pythonの推定型ヒントはbasedpyright、TypeScript/TSXはvtslsが表示し�
 ## WindowsからSSH接続したときのコピー・貼り付け
 
 - **Neovim → Windows:** `v`で選択して`Space y`。行全体なら`Space Y`。コピー先のアプリでは`Ctrl+V`で貼り付けます。
+- **挿入モードからの選択:** Shift＋矢印、またはShiftを押さずにマウスドラッグします。選択中は`Ctrl+C`でWindowsへコピーできます。SelectモードではSpaceも入力文字になるため、`Space y`ではなく`Ctrl+C`を使います。
 - **Windows → Neovim:** Windows側でコピーし、Neovimを`i`で挿入モードにしてWindows Terminalの`Ctrl+Shift+V`で貼り付けます。
 - `y`と`p`はNeovim内のコピー・貼り付けです。接続元へのコピーは`Space y`を使います。`Ctrl+C`はNeovimでは通常コピー操作になりません。
 - 画面の文字をマウスで取りたいときは、Windows Terminalで**Shiftを押しながらドラッグ**し、`Ctrl+Shift+C`または右クリックでコピーできます。
+
+Shift＋矢印はターミナルがキー入力をNeovimへ渡す必要があります。Windows Terminal側で別操作に割り当てている場合は、その割り当てを調整するか通常のマウスドラッグを使ってください。`v`から始める従来のVisual選択も利用できます。
 
 `Space y`はNeovim標準のOSC 52を使います。Linux側に`xclip`やWindowsの`clip.exe`を追加する必要はありません。OSC 52対応のターミナルが必要です。Windows Terminalで無効化されている場合は、プロファイル設定の`compatibility.allowOSC52`を確認してください。tmuxを使う場合は、そのOSC 52設定にも依存します。まずtmuxなしのSSH接続で確認できます。Windowsの古いコンソールや他のSSHクライアントでは、ターミナル側のコピー操作を使ってください。

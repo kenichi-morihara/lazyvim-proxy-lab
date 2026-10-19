@@ -34,6 +34,7 @@ Gitの認証が必要な場合は、利用環境の認証方法を事前に設�
 |---|---|
 | `make` / `make install` | 事前確認 → 必要なら本体ビルド → 設定・言語ツール・プラグイン・parser導入 → 起動確認 |
 | `make doctor` | 導入前の依存確認だけ。インストールや通信は行わない |
+| `make setup-tailscale` | 任意のTailscale起動・ログイン。接続を始めたいときにだけ実行 |
 
 `make`は事前確認も実行するので、先に`make doctor`を実行する必要はありません。確認だけしたい場合に使ってください。
 
@@ -172,6 +173,7 @@ Pythonのルート直下の`.venv`、または起動シェルの`VIRTUAL_ENV`を
 | ターミナル | `Ctrl-/` |
 | チートシート | `Space ?` / `:Cheatsheet` |
 | 接続元クリップボードへコピー | 選択後`Space y` / 現在行`Space Y` |
+| 挿入モードからの選択 | Shift＋矢印 / マウスドラッグ。`Ctrl+C`でコピー、入力で置き換え |
 
 コマンドの出力を残すには`:EditorRun コマンド`、読み直すには`:EditorRunLast`を使います。職場のLSP状態は`:EditorReport`で確認し、`:EditorReportSend 端末名`でTailscale経由でMacへ送信できます。準備と収集内容は[職場からの診断収集](editor/REMOTE-DIAGNOSTICS.md)を参照してください。
 

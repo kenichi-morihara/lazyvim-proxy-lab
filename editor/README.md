@@ -42,6 +42,10 @@ Neovim内で`Space ?`または`:Cheatsheet`を実行すると、[チートシー
 
 接続元クリップボードへのコピーは選択後`Space y`、現在行は`Space Y`です。OSC 52を使うためSSH越しでも利用でき、追加プラグインや外部コマンドは不要です。Windows Terminalの貼り付けは挿入モードで`Ctrl+Shift+V`を使います。通常の`y`・`p`はNeovim内のレジスタを利用します。
 
+挿入モードではShift＋矢印またはマウスドラッグで文字を選択できます。この選択中は`Ctrl+C`で接続元へコピーし、そのまま文字を入力すると選択部分を置き換えます。Shift＋ドラッグはWindows Terminal自体の選択です。
+
 ## コマンド実行・職場からの診断収集
 
 `:EditorRun コマンド`で出力・エラー・終了コードを結果バッファに残せます。`:EditorRunLast`で再表示します。`:EditorReport`で現在のLSP状態を確認し、`:EditorReportSend 端末名`でTailscale経由でMacへ送れます。WindowsへのTailscale導入は不要です。Tailscaleは任意の機能で、`make`の必須依存には加えません。[接続準備と使い方](REMOTE-DIAGNOSTICS.md)を参照してください。
+
+Tailscaleの起動・ログインは、接続を始めたいときにだけ`make setup-tailscale`で実行します。TailscaleのOSパッケージ導入後に利用でき、通常の`make` / `make doctor`と独立しています。

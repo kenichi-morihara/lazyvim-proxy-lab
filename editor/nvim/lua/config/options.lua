@@ -6,6 +6,10 @@ vim.g.lazyvim_blink_main = false
 -- which Windows Terminal may not answer. Paste with the terminal's paste key.
 vim.g.clipboard = "osc52"
 vim.opt.clipboard = ""
+-- Shift+arrows and mouse dragging use Select mode; typing replaces the selection.
+vim.opt.mouse = "a"
+vim.opt.selectmode = { "mouse", "key" }
+vim.opt.keymodel = { "startsel", "stopsel" }
 vim.opt.updatetime = 300
 vim.opt.timeoutlen = 400
 vim.opt.swapfile = false

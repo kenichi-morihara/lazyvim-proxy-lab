@@ -118,11 +118,23 @@ class Installer:
         self.verify()
         return 0
 
+    def setup_tailscale(self):
+        missing = [name for name in ("tailscale", "tailscaled") if not self.executable(name)]
+        if missing:
+            raise RuntimeError("Optional Tailscale tools missing: " + ", ".join(missing) +
+                               ". Install the Tailscale OS package as described in editor/REMOTE-DIAGNOSTICS.md, "
+                               "then rerun make setup-tailscale.")
+        self.run_helper("scripts/tailscale-local", "start")
+        self.run_helper("scripts/tailscale-local", "up", "--accept-dns=false")
+        print("PASS Tailscale setup. In Neovim, run :EditorTailscale netcheck.", flush=True)
+        return 0
+
 
 def main():
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("doctor")
+    subparsers.add_parser("setup-tailscale")
     install = subparsers.add_parser("install")
     install.add_argument("--copy", action="store_true")
     args = parser.parse_args()
@@ -130,9 +142,12 @@ def main():
     try:
         if args.command == "doctor":
             return 0 if installer.preflight() else 1
+        if args.command == "setup-tailscale":
+            return installer.setup_tailscale()
         return installer.install(args.copy)
     except (OSError, RuntimeError, subprocess.SubprocessError) as error:
-        print(f"ERROR: {error}\nFix the reported issue and rerun make; completed stages and caches can be reused.", file=sys.stderr)
+        retry = "make setup-tailscale" if args.command == "setup-tailscale" else "make"
+        print(f"ERROR: {error}\nFix the reported issue and rerun {retry}; completed stages and caches can be reused.", file=sys.stderr)
         return 1
 
 

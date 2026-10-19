@@ -10,3 +10,5 @@ vim.api.nvim_create_user_command("Cheatsheet", open_cheatsheet, { desc = "Open k
 -- Copy through SSH to the terminal host (e.g. Windows Terminal).
 vim.keymap.set({ "n", "x" }, "<leader>y", '"+y', { desc = "Copy to system clipboard" })
 vim.keymap.set("n", "<leader>Y", '"+yy', { desc = "Copy line to system clipboard" })
+-- Printable leader keys replace text in Select mode, so use Ctrl+C there.
+vim.keymap.set("s", "<C-c>", '<C-g>"+ygv<C-g>', { desc = "Copy selected text to system clipboard" })

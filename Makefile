@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := install
-.PHONY: install doctor
+.PHONY: install doctor setup-tailscale
 
-install doctor:
+install doctor setup-tailscale:
 	@$(MAKE) --no-print-directory -C editor $@
