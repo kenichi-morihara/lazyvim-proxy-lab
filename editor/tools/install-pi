@@ -32,6 +32,7 @@ expected = json.loads((TOOLS / "pi/package.json").read_text())["dependencies"]["
 actual = subprocess.check_output(["node", str(cli), "--version"], env=env, text=True).strip()
 if actual != expected:
     raise SystemExit("Unexpected Pi version; setup was not completed")
+shutil.copytree(TOOLS.parent / "pi", runtime / "company", dirs_exist_ok=True, ignore=shutil.ignore_patterns("node_modules", "__pycache__"))
 destination.parent.mkdir(parents=True, exist_ok=True)
 source = (TOOLS.parent / "scripts/pi-internal").read_text().split("\n", 1)[1]
 temporary = destination.with_name(".pi-install-" + str(os.getpid()))
@@ -42,5 +43,5 @@ try:
 finally:
     temporary.unlink(missing_ok=True)
 print(f"PASS Pi {actual} installed: {destination}")
-print("Set INTERNAL_AI_BASE_URL, INTERNAL_AI_MODEL and INTERNAL_AI_API_KEY, then run pi.")
+print("Configure the OpenAI-compatible or company-chat transport, then run pi. See editor/AI-SETUP.md.")
 print("Proxy and CA use the caller's environment. See editor/AI-SETUP.md.")

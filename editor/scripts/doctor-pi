@@ -1,0 +1,11 @@
+#!/usr/bin/env python3
+import os
+from pathlib import Path
+import subprocess
+
+prefix = Path(os.environ.get("EDITOR_PREFIX") or Path.home() / ".local").expanduser().resolve()
+command = prefix / "bin/pi"
+if not command.is_file():
+    raise SystemExit("Pi is not installed; run make setup-pi first.")
+env = dict(os.environ, PI_DOCTOR_PROBE="1" if os.environ.get("PROBE") == "1" else "0")
+raise SystemExit(subprocess.call([str(command), "--doctor"], env=env))

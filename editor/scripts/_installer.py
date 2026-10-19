@@ -140,6 +140,7 @@ def main():
     subparsers.add_parser("doctor")
     subparsers.add_parser("setup-tailscale")
     subparsers.add_parser("setup-pi")
+    subparsers.add_parser("doctor-pi")
     install = subparsers.add_parser("install")
     install.add_argument("--copy", action="store_true")
     args = parser.parse_args()
@@ -151,9 +152,12 @@ def main():
             return installer.setup_tailscale()
         if args.command == "setup-pi":
             return installer.setup_pi()
+        if args.command == "doctor-pi":
+            installer.run_helper("scripts/doctor-pi")
+            return 0
         return installer.install(args.copy)
     except (OSError, RuntimeError, subprocess.SubprocessError) as error:
-        retry = "make " + args.command if args.command.startswith("setup-") else "make"
+        retry = "make " + args.command if args.command.startswith("setup-") or args.command == "doctor-pi" else "make"
         print(f"ERROR: {error}\nFix the reported issue and rerun {retry}; completed stages and caches can be reused.", file=sys.stderr)
         return 1
 

@@ -2,6 +2,16 @@
 
 初期導入の検証日: 2026-10-17（日本時間）
 
+## Cookie認証の社内API対応（2026-10-19）
+
+- 変更前にGitHub APIで対象repoをPrivateに変更し、`isPrivate=true`を確認。画像・実Cookie・実社内ホストはソースに追加していません。
+- `company-chat`専用providerとnative / JSONの明示切り替え、Cookieファイル読み直し、ローカル診断と明示的なnonce付きツール診断を追加。
+- macOS ARM64 / Node 22.22.0と、Rocky Linux 9 ARM64の入れ子Docker / Node 22.23.2の両方で実Piの5統合テストがPASS。native / JSON双方のread→edit→ツール結果再送→回答、診断nonce、Cookie更新、認証・HTML・リダイレクト・不正JSON・未登録ツール・不正引数・切断時の停止を確認。
+- Nodeの4テストがPASS。SSEの1バイト分割・CRLF・日本語、JSON検証、Cookie権限と再読込、usageとフック、キャンセルを確認。既存OpenAI互換接続の実PiテストもPASS。
+- Python通常テスト全42件のうち36件PASS、実Pi導入が必要な6件は通常実行でskipし、導入済み環境で別途PASS。OpenAIラッパーはローカルの偽upstreamで認証分離・ストリーム転送・リダイレクト拒否を検証。
+- `editor/`をコピーした独立環境から、制限付きproxy・一般ユーザーでsetup-piの再導入がPASS。npm取得先・proxyルールの追加はありません。lab内の現在の公開CAをテスト用環境変数で指定しました。
+- 実社内APIの応答は未入手です。OpenAI Chat Completions SSEという仮定、追加のnative項目への対応、JSON指示への追従、SSO Cookieの有効性は職場での診断が必要です。OpenAI実サービスへの課金リクエストは行っていません。
+
 ## 任意のPiセットアップ（2026-10-19）
 
 - `make setup-pi`を通常導入・Tailscaleから分離。Neovim用の事前確認や本体ビルドを呼び出さないこと、失敗時に専用の再実行コマンドを表示することをテスト。

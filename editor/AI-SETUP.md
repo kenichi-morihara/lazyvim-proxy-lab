@@ -1,6 +1,73 @@
 # 社内AIとPiの接続準備
 
-Piは通常の`make`から分離しています。社内APIの呼び出し形式は未確認のため、まずOpenAI Chat Completions互換の接続設定を用意しています。独自のJSON形式が必要なら変換アダプターを追加します。
+Piは通常の`make`から分離しています。`openai`（従来のOpenAI互換）と`company-chat`（Cookie認証の社内API）の2方式を利用できます。画像から確認できたのはリクエストだけです。社内APIのSSE応答・native tools対応は未確認で、以下の再現サーバーと診断で段階的に確認します。
+
+## 職場のCookie認証APIを使う
+
+```bash
+make setup-pi
+export INTERNAL_AI_TRANSPORT=company-chat
+export INTERNAL_AI_ENDPOINT='http://internal-ai.example/nomuchat/sendmessageforstream'
+export INTERNAL_AI_COOKIE_FILE="$HOME/.local/state/editor-pi/session.cookies"
+```
+
+実際のURLは職場で設定します。画像のHTTP形式にも対応します。Cookieは`Cookie:`ヘッダーの値（`name=value; name=value`の1行）を手動保存します。ブラウザーのログイン操作やSSO更新は自動化しません。Bashで値を履歴や画面に出さず保存する例:
+
+```bash
+mkdir -p "$HOME/.local/state/editor-pi"
+chmod 700 "$HOME/.local/state/editor-pi"
+touch "$INTERNAL_AI_COOKIE_FILE"
+chmod 600 "$INTERNAL_AI_COOKIE_FILE"
+read -rsp 'Cookie: ' company_cookie; echo
+(umask 077; printf '%s' "$company_cookie" > "$INTERNAL_AI_COOKIE_FILE")
+unset company_cookie
+chmod 600 "$INTERNAL_AI_COOKIE_FILE"
+make doctor-pi
+```
+
+`make doctor-pi`はローカル確認のみで通信しません。実APIへの診断は明示して実行します。
+
+```bash
+make doctor-pi PROBE=1
+pi
+```
+
+診断はランダムなnonceを持つ無害な`diagnostic_echo`ツールを要求し、応答のツール名・引数を確認します。ツール自体は実行しません。200や通常の文章だけでは成功と判定しません。
+
+- `INTERNAL_AI_TOOL_MODE=native`が既定。画像の5項目に`messages`、`tools`、`tool_choice`、`stream`を追加します。実社内APIがこれらを解釈するかは診断が必要です。
+- native非対応なら`INTERNAL_AI_TOOL_MODE=json`を明示します。送るJSONは画像の5項目だけとし、`message`に全履歴・ツール定義・専用JSON応答の指示を含めます。応答のJSON全体を検証してからPiへ渡すため、JSON方式では回答を途中表示しません。
+- JSON方式は`{"type":"text","text":"..."}`または`{"type":"tool_calls","calls":[{"id":"id","name":"read","arguments":{"path":"file"}}]}`だけを受け付けます。未登録ツール、不正引数、通常文章、Markdownのコードブロックは実行しません。実行はPiのツール処理に任せ、結果を次のリクエストへ戻します。
+- Cookieは毎リクエストで読み直します。認証切れの`COMPANY_AUTH_EXPIRED_UPDATE_COOKIE`はファイルを更新して再試行してください。リダイレクトを追わず、HTMLログインページ・不明な応答・不完全なストリームでは停止します。
+- 応答はOpenAI Chat Completions SSE（`data: {...}`、`finish_reason`、`data: [DONE]`）を仮定しています。異なる場合は`COMPANY_*`エラーとし、レスポンス本文をログへ出しません。実応答に合わせたデコーダー修正が必要です。
+- `INTERNAL_AI_ORIGIN` / `INTERNAL_AI_REFERER`は必要な場合だけ指定します。既定は接続先から算出します。ブラウザーのUser-AgentやCookie以外の認証ヘッダーを推測して追加しません。
+- `INTERNAL_AI_MODEL`の既定表示名は`company-chat`。`INTERNAL_AI_CONTEXT_WINDOW=32768`、`INTERNAL_AI_MAX_TOKENS=4096`、`INTERNAL_AI_TIMEOUT_MS=120000`が既定です。実モデルの制限に合わせて職場で調整してください。
+- proxy・CA・`NO_PROXY`は呼び出し元の設定を使用します。実社内ホストへ直接接続すべき場合だけ、そのホストを`NO_PROXY`へ追加します。外部AIへのフォールバックはしません。
+
+社内URL・Cookieファイル・画像はコミットしないでください。Piのセッション履歴には会話やツール結果が残ります。通常ログにはCookie・ヘッダー・リクエスト本文・応答本文を出しません。トークン使用量は応答にusageがある場合だけ取得し、料金は未設定のため0表示です。
+
+## ローカルの再現サーバー
+
+repoルートで:
+
+```bash
+make pi-lab
+```
+
+既定は`127.0.0.1:8766`のダミーサーバーで、OpenAIを含め外部AIへ接続しません。別のシェルでCookieファイルにダミー値`lab-session=demo`を0600で保存し、上記の`company-chat`設定のURLを`http://127.0.0.1:8766/nomuchat/sendmessageforstream`に変更します。`make doctor-pi PROBE=1`が成功します。
+
+`pi -p --no-session 'edit sample.txt'`はダミーモデルの動作確認用です。作業用ディレクトリに`before`を含む`sample.txt`を作ると、read→edit→完了応答を再現します。実際にそのファイルを書き換えるので、テスト用のディレクトリで実行してください。
+
+OpenAIを包むモードを明示すると実APIへ接続します。キー・モデルは環境変数のみから取得し、社内CookieをOpenAIへ転送しません。
+
+```bash
+export PI_LAB_BACKEND=openai
+export OPENAI_MODEL='your-model'
+read -rsp 'OpenAI API key: ' OPENAI_API_KEY; echo
+export OPENAI_API_KEY
+make pi-lab
+```
+
+`OPENAI_BASE_URL`は既定`https://api.openai.com/v1`。`PI_LAB_PORT`でポートを変更できます。サーバーは`Ctrl+C`で終了します。このサーバーはローカル再現用で、職場では不要です。`editor/`は`lab/`に依存しません。
 
 ## Piだけを導入する
 
@@ -24,11 +91,12 @@ export PATH="$HOME/.local/bin:$PATH"
 pi --version
 ```
 
-## 社内AIへ接続する
+## 従来のOpenAI互換APIへ接続する
 
 職場のシェル内で設定します。キーや実際の社内URLはこのrepoに書かないでください。
 
 ```bash
+export INTERNAL_AI_TRANSPORT=openai
 export INTERNAL_AI_BASE_URL='https://internal-ai.example/v1'
 export INTERNAL_AI_MODEL='your-internal-model'
 read -rsp '社内AI API key: ' INTERNAL_AI_API_KEY; echo
@@ -44,7 +112,7 @@ export INTERNAL_AI_AUTH_HEADER='api-key'
 
 この場合はキーをそのヘッダーへそのまま設定します。Responses互換APIを使う場合は`INTERNAL_AI_API=openai-responses`を指定できます（既定は`openai-completions`）。社内AIにはストリーム応答とツール呼び出しの互換性が必要です。URLにqueryが必要なAPI、独自の認証フロー、リクエストのラップ形式は別途対応が必要です。職場APIの接続確認はまだ行っていません。
 
-起動時のモデルカタログ更新・バージョン確認・統計送信・補助バイナリ取得を`PI_OFFLINE=1`、`PI_SKIP_VERSION_CHECK=1`、`PI_TELEMETRY=0`で停止します。**このoffline設定でも指定した社内AIへの推論リクエストは実行できます。** `rg` / `fd`はPATH上のものを使用します。自動発見する拡張も`--no-extensions`で無効にします。
+起動時のモデルカタログ更新・バージョン確認・統計送信・補助バイナリ取得を`PI_OFFLINE=1`、`PI_SKIP_VERSION_CHECK=1`、`PI_TELEMETRY=0`で停止します。**このoffline設定でも指定した社内AIへの推論リクエストは実行できます。** `rg` / `fd`はPATH上のものを使用します。自動発見する拡張は`--no-extensions`で無効にし、company-chatでは今回の専用providerだけを明示ロードします。
 
 既存の`~/.pi/agent`には書き込みません。実行ごとの設定は`~/.local/state/editor-pi/runtime-*`へ0700/0600で作り、終了時に削除します。セッション履歴は`~/.local/state/editor-pi/sessions`に保持します（XDG_STATE_HOMEに従う）。外部providerへの自動フォールバックは設定していません。ネットワークの接続制限そのものは職場のproxy・ファイアウォールに従います。
 
@@ -62,6 +130,8 @@ export INTERNAL_AI_AUTH_HEADER='api-key'
 
 ```bash
 EDITOR_PI_TEST_PREFIX="$HOME/.local" python3 tests/pi_test.py
+EDITOR_PI_TEST_PREFIX="$HOME/.local" python3 tests/company_pi_test.py
+EDITOR_PI_TEST_PREFIX="$HOME/.local" node --test tests/company-provider.test.mjs
 ```
 
 `tests/`はrepoルートにあります。`editor/`だけ移す場合は導入・起動に不要です。

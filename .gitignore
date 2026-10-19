@@ -10,3 +10,9 @@ tailscaled.state
 tailscaled.log
 tailscaled.sock
 editor-ai-capture/
+.env
+.env.*
+!.env.example
+*.cookies
+cookies.txt
+.company-ai/

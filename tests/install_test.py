@@ -98,6 +98,17 @@ prefix.mkdir(parents=True, exist_ok=True)
     def stages(self):
         return self.log.read_text().splitlines() if self.log.exists() else []
 
+    def test_doctor_pi_uses_installed_launcher_without_install_or_editor_preflight(self):
+        command = self.home / '.local/bin/pi'
+        command.parent.mkdir(parents=True)
+        command.write_text('#!/bin/sh\nprintf "doctor:%s:%s\\n" "$1" "$PI_DOCTOR_PROBE" >> "$TEST_LOG"\n')
+        command.chmod(0o755)
+        for name in ('cc', 'c++', 'cmake', 'ninja', 'msgfmt'):
+            (self.bin / name).unlink()
+        self.assertEqual(self.run_make('doctor-pi').returncode, 0)
+        self.assertEqual(self.run_make('doctor-pi', 'PROBE=1', standalone=True).returncode, 0)
+        self.assertEqual(self.stages(), ['doctor:--doctor:0', 'doctor:--doctor:1'])
+
     def test_setup_pi_is_independent_of_editor_preflight(self):
         for name in ('cc', 'c++', 'cmake', 'ninja', 'msgfmt'):
             (self.bin / name).unlink()
