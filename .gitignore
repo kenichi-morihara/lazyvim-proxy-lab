@@ -9,3 +9,4 @@ editor-report-*.json
 tailscaled.state
 tailscaled.log
 tailscaled.sock
+editor-ai-capture/

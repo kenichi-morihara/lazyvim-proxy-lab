@@ -1,5 +1,7 @@
 # standalone editor
 
+社内AIとPiの接続準備・ダミーAPI例の受信手順は[AI-SETUP.md](AI-SETUP.md)を参照してください。
+
 このディレクトリは単独で移動できます。`nvim/`が設定本体、`tools/`が導入とlock、`scripts/`が配置と診断です。lab側への依存はありません。
 
 通常の入口はこのディレクトリのMakefileです。`editor/`だけをコピーした場合も同じ操作で使えます。
