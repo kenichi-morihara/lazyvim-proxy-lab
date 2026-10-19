@@ -1,4 +1,4 @@
-vim.g.lazyvim_python_lsp = "pyright"
+vim.g.lazyvim_python_lsp = "basedpyright"
 vim.g.lazyvim_python_ruff = "ruff"
 vim.g.lazyvim_blink_main = false
 vim.opt.clipboard = "" -- SSH clipboard support depends on the local terminal; use its copy action.

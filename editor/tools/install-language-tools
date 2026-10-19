@@ -13,7 +13,7 @@ run(os.environ.get("PYTHON", "python3"), "-m", "venv", venv)
 run(venv / "bin/python", "-m", "pip", "install", "--only-binary=:all:", "--require-hashes", "-r", TOOLS / "requirements.lock")
 bindir = PREFIX / "bin"
 bindir.mkdir(parents=True, exist_ok=True)
-for name in ("pyright", "pyright-langserver", "vtsls", "tsc", "prettier", "ruff"):
+for name in ("basedpyright", "basedpyright-langserver", "vtsls", "tsc", "prettier", "ruff"):
     source = (venv / "bin/ruff") if name == "ruff" else (npm / "node_modules/.bin" / name)
     dest = bindir / name
     if dest.is_symlink() and dest.resolve() == source.resolve():

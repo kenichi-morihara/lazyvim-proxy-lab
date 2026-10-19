@@ -94,7 +94,7 @@ class Installer:
     def verify(self):
         if not self.compatible_neovim():
             raise RuntimeError(f"Neovim {self.version} with LuaJIT is not available")
-        required = ("pyright-langserver", "vtsls", "ruff", "prettier")
+        required = ("basedpyright-langserver", "vtsls", "ruff", "prettier")
         missing = [name for name in required if not self.executable(name)]
         if missing:
             raise RuntimeError("Installed tools are missing: " + ", ".join(missing))

@@ -9,7 +9,7 @@
     "revision": "306a05526ada86a7b30af95c5cc81ffba93fef97"
   },
   "npm": {
-    "pyright": "1.1.407",
+    "basedpyright": "1.40.2",
     "@vtsls/language-server": "0.2.9",
     "typescript": "5.9.3",
     "prettier": "3.6.2"

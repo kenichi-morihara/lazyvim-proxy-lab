@@ -49,7 +49,7 @@ prefix.mkdir(parents=True, exist_ok=True)
             if stage == 'build-neovim':
                 code += "p=prefix/'nvim';p.write_text(" + repr(self.nvim_script('0.11.5', True)) + ");p.chmod(0o755)\n"
             if stage == 'install-language-tools':
-                code += "\nfor name in ('pyright-langserver','vtsls','ruff','prettier'):\n p=prefix/name;p.write_text('#!/bin/sh\\nexit 0\\n');p.chmod(0o755)\n"
+                code += "\nfor name in ('basedpyright-langserver','vtsls','ruff','prettier'):\n p=prefix/name;p.write_text('#!/bin/sh\\nexit 0\\n');p.chmod(0o755)\n"
             (self.editor / 'tools' / stage).write_text(code)
 
     def tool(self, name, body):

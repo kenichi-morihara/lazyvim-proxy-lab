@@ -30,12 +30,12 @@ return {
   {
     "neovim/nvim-lspconfig",
     opts = {
-      inlay_hints = { enabled = false },
+      inlay_hints = { enabled = true },
       servers = {
         lua_ls = { enabled = false },
-        pyright = {
+        basedpyright = {
           mason = false,
-          settings = { python = { analysis = { typeCheckingMode = "basic", diagnosticMode = "openFilesOnly", autoSearchPaths = true } } },
+          settings = { basedpyright = { analysis = { typeCheckingMode = "basic", diagnosticMode = "openFilesOnly", autoSearchPaths = true, inlayHints = { variableTypes = true, callArgumentNames = true, functionReturnTypes = true, genericTypes = true } } } },
           before_init = function(_, config)
             local root = config.root_dir or vim.fn.getcwd()
             local python = vim.env.VIRTUAL_ENV and (vim.env.VIRTUAL_ENV .. "/bin/python") or (root .. "/.venv/bin/python")
@@ -45,7 +45,20 @@ return {
           end,
         },
         ruff = { mason = false },
-        vtsls = { mason = false, settings = { vtsls = { autoUseWorkspaceTsdk = true } } },
+        vtsls = {
+          mason = false,
+          settings = {
+            vtsls = { autoUseWorkspaceTsdk = true },
+            typescript = { inlayHints = {
+              enumMemberValues = { enabled = true },
+              functionLikeReturnTypes = { enabled = true },
+              parameterNames = { enabled = "literals" },
+              parameterTypes = { enabled = true },
+              propertyDeclarationTypes = { enabled = true },
+              variableTypes = { enabled = true },
+            } },
+          },
+        },
       },
     },
   },

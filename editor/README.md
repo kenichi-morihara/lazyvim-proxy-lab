@@ -35,3 +35,7 @@ make doctor   # インストールせず事前確認だけ
 `build-neovim`はインストール済みrevisionを記録します。新バージョンをビルドする場合は`EDITOR_BUILD_CACHE`を別ディレクトリにして古いCMakeキャッシュを再利用しないでください。自分で同じ配置先のnvimを置き換えた場合は`$EDITOR_PREFIX/share/editor-neovim-revision`を削除して再ビルドします。
 
 Neovimの任意provider（Python/Node/Ruby/Perl）は無効です。LSPは独立プロセスなのでpynvimは不要です。`checkhealth`が任意のlazygitやTree-sitter CLIを警告する場合があります。この構成のparser導入はCLIを使いません。Lua用LSPは導入しません。
+
+## キーマップ早見表
+
+Neovim内で`Space ?`または`:Cheatsheet`を実行すると、[チートシート](nvim/CHEATSHEET.md)を開きます。Spaceを押して少し待つとwhich-keyがその場で利用できる操作を表示します。型ヒントが出ない場合の確認手順もチートシートに記載しています。

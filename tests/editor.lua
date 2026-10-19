@@ -7,7 +7,7 @@ local function main()
   vim.cmd("doautocmd User VeryLazy")
   require("lazy").load({ plugins = { "nvim-lspconfig", "nvim-treesitter", "blink.cmp", "conform.nvim" } })
   vim.api.nvim_exec_autocmds("BufReadPost", { buffer = 0 })
-  local name = vim.bo.filetype == "python" and "pyright" or "vtsls"
+  local name = vim.bo.filetype == "python" and "basedpyright" or "vtsls"
   check(vim.wait(60000, function() return #vim.lsp.get_clients({ bufnr = 0, name = name }) > 0 end, 100), name .. " attached")
   local client = vim.lsp.get_clients({ bufnr = 0, name = name })[1]
   check(vim.wait(60000, function() return #vim.diagnostic.get(0, { severity = vim.diagnostic.severity.ERROR }) > 0 end, 100), "intentional type error diagnosed")
@@ -37,12 +37,12 @@ local function main()
   check(parser and #parser:parse() > 0, "Tree-sitter parser works")
   check(vim.treesitter.query.get(lang, "highlights") ~= nil, "highlight queries load")
   check(vim.treesitter.highlighter.active[vim.api.nvim_get_current_buf()] ~= nil, "highlighting attached")
-  local formatter = name == "pyright" and "ruff_format" or "prettier"
+  local formatter = name == "basedpyright" and "ruff_format" or "prettier"
   local info = require("conform").get_formatter_info(formatter, 0)
-  local expected = name == "pyright" and "/.venv/bin/ruff" or "/node_modules/.bin/prettier"
+  local expected = name == "basedpyright" and "/.venv/bin/ruff" or "/node_modules/.bin/prettier"
   check(info.command and info.command:find(expected, 1, true), "project formatter preferred")
   vim.cmd("setlocal nofixendofline")
-  local unformatted = name == "pyright" and "value={ 'a':1,'b':2 }" or "const value={a:1,b:2}"
+  local unformatted = name == "basedpyright" and "value={ 'a':1,'b':2 }" or "const value={a:1,b:2}"
   vim.api.nvim_buf_set_lines(0, 0, -1, false, { unformatted })
   require("conform").format({ async = false, timeout_ms = 15000, lsp_format = "never" })
   check(vim.api.nvim_buf_get_lines(0, 0, -1, false)[1] ~= unformatted, "formatter changed unformatted buffer")

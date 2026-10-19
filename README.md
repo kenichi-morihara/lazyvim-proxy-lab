@@ -96,7 +96,7 @@ export PATH="$HOME/.local/bin:$PATH"
 - LazyVim 15.13.0とプラグインは`lazy-lock.json`のcommitのみをGitで取得。通常起動で欠落プラグインを自動取得しません。
 - Mason・LuaRocks・更新チェックを無効化。BlinkはLua補完エンジンを使います。
 - Tree-sitterは固定した生成済み`parser.c`とscannerをC/C++コンパイラでビルド。`TSInstall`・`TSUpdate`は案内表示に置き換えます。CLIの配布バイナリは不要です。
-- Python: Pyright（型・補完）とRuff（診断・整形）。TSX: vtslsとTypeScript（型・補完）、Prettier（整形）。npm lockとpip hash lockで固定します。
+- Python: basedpyright（型・補完・インライン型ヒント）とRuff（診断・整形）。TSX: vtslsとTypeScript（型・補完）、Prettier（整形）。npm lockとpip hash lockで固定します。
 
 新しい言語やプラグインの追加は明示的な更新作業です。`:Lazy update`だけで更新するとparserとquery、Neovimの対応が崩れる場合があります。更新方法は[editorのREADME](editor/README.md)を参照してください。
 
@@ -171,7 +171,7 @@ Pythonのルート直下の`.venv`、または起動シェルの`VIRTUAL_ENV`を
 | 診断の表示 | `Space c d` |
 | ターミナル | `Ctrl-/` |
 
-大きなファイルは構文ハイライトを抑えます。inlay hints・アニメーションは無効です。Pythonの解析は開いているファイル中心です。デバッガー・AI補完は含めません。SSH越しのコピーはローカルターミナルの選択・コピーを使ってください。Nerd FontはMac側のターミナルに任意で設定します。
+大きなファイルは構文ハイライトを抑えます。inlay hintsを有効にしています。Pythonの解析は開いているファイル中心です。デバッガー・AI補完は含めません。SSH越しのコピーはローカルターミナルの選択・コピーを使ってください。Nerd FontはMac側のターミナルに任意で設定します。
 
 ## dotfilesへ移す
 
