@@ -174,6 +174,8 @@ Pythonのルート直下の`.venv`、または起動シェルの`VIRTUAL_ENV`を
 | チートシート | `Space ?` / `:Cheatsheet` |
 | 接続元クリップボードへコピー | 選択後`Space y` / 現在行`Space Y` |
 | 挿入モードからの選択 | Shift＋矢印 / マウスドラッグ。`Ctrl+C`でコピー、入力で置き換え |
+| 全選択 / 現在のファイルを閉じる | `Ctrl+A` / `Ctrl+W`（未保存なら閉じない） |
+| ウィンドウ操作 | `Space w`に続けて`h/j/k/l`で移動、`s/v`で分割、`d`で閉じる |
 
 コマンドの出力を残すには`:EditorRun コマンド`、読み直すには`:EditorRunLast`を使います。職場のLSP状態は`:EditorReport`で確認し、`:EditorReportSend 端末名`でTailscale経由でMacへ送信できます。準備と収集内容は[職場からの診断収集](editor/REMOTE-DIAGNOSTICS.md)を参照してください。
 

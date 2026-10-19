@@ -87,6 +87,57 @@ vim.g.selection_ready = true
         self.send('Z<Esc>')
         self.assertEqual(self.query('getline(1)'), 'Z world')
 
+    def test_select_all_copy_and_replace_in_normal_insert_and_select_modes(self):
+        for mode in ('normal', 'insert', 'select'):
+            with self.subTest(mode=mode):
+                self.send('<Esc>')
+                self.query("nvim_buf_set_lines(0,0,-1,v:false,['one','two','three'])")
+                self.send('gg0')
+                if mode == 'insert': self.send('i')
+                if mode == 'select': self.send('i<S-Right>')
+                self.send('<C-a>')
+                self.assertEqual(self.query('mode(1)'), 's')
+                self.send('<C-c>')
+                self.assertEqual(self.query("get(g:, 'selection_copied', '')"), 'one\ntwo\nthree')
+                self.send('X<Esc>')
+                self.assertEqual(self.query('getline(1)'), 'X')
+                self.assertEqual(self.query("line('$')"), '1')
+
+    def test_close_current_file_from_insert_mode_keeps_the_editor_open(self):
+        self.query("nvim_buf_set_name(0, '" + self.temp.name + "/first.txt')")
+        original = self.query('bufnr()')
+        self.query("execute('enew')")
+        current = self.query('bufnr()')
+        self.assertNotEqual(original, current)
+        self.send('i<C-w>')
+        self.assertEqual(self.query('mode(1)'), 'n')
+        self.assertNotEqual(self.query('bufnr()'), current)
+        self.assertEqual(self.query('buflisted(' + current + ')'), '0')
+
+    def test_close_preserves_modified_text(self):
+        self.query("nvim_buf_set_lines(0,0,-1,v:false,['unsaved text'])")
+        current = self.query('bufnr()')
+        self.send('A<C-w>')
+        self.assertEqual(self.query('bufnr()'), current)
+        self.assertEqual(self.query('getline(1)'), 'unsaved text')
+        self.assertEqual(self.query('&modified'), '1')
+
+    def test_window_shortcuts_work_without_using_the_ctrl_w_mapping(self):
+        self.query("execute('set splitright splitbelow')")
+        left = self.query('win_getid()')
+        self.send(' wv')
+        self.assertEqual(self.query('winnr("$")'), '2')
+        self.send(' wh')
+        self.assertEqual(self.query('win_getid()'), left)
+        self.send('<C-l>')
+        self.assertNotEqual(self.query('win_getid()'), left)
+        self.send(' wo')
+        self.assertEqual(self.query('winnr("$")'), '1')
+        self.send(' -')
+        self.assertEqual(self.query('winnr("$")'), '2')
+        self.send(' wd')
+        self.assertEqual(self.query('winnr("$")'), '1')
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -19,6 +19,8 @@ Leaderキーは **Space** です。Spaceを押して少し待つとwhich-keyが�
 | `Space Y` | 現在行を接続元のクリップボードへコピー |
 | `gcc` / `gc` | 行 / 選択範囲をコメント化 |
 | `Ctrl-s` | 保存 |
+| `Ctrl+A` | ファイル全体を選択（Normal / Insert / Select / Visual） |
+| `Ctrl+W` | 現在のファイルを閉じる。未保存なら閉じずに通知 |
 | `Space q q` | 終了 |
 
 ## ファイル・文字列を探す
@@ -30,6 +32,21 @@ Leaderキーは **Space** です。Spaceを押して少し待つとwhich-keyが�
 | `Space s g` | プロジェクト内の文字列を検索（`rg`を使用） |
 | `Space s r` | 最近開いたファイル |
 | `Space b b` | 開いているバッファを切り替え |
+
+## ウィンドウ操作
+
+`Space w`を押して待つと操作候補が出ます。`Ctrl+W`はファイルを閉じる専用です。
+
+| キー | 操作 |
+|---|---|
+| `Space w h/j/k/l` | 左 / 下 / 上 / 右のウィンドウへ移動 |
+| `Space w s` / `Space w v` | 下 / 右へ分割 |
+| `Space w w` | 次のウィンドウへ移動 |
+| `Space w d` | 現在のウィンドウを閉じる |
+| `Space w o` | 現在のウィンドウだけ残す |
+| `Space w =` | 分割の大きさを揃える |
+
+既存の`Ctrl+h/j/k/l`による移動、`Space -` / `Space |`による分割も使えます。ファイルを閉じる`Ctrl+W`は、最後のファイルでもNeovim自体を終了しません。未保存のときは先に`Ctrl+S`で保存してください。コマンドラインや内蔵ターミナルの`Ctrl+A` / `Ctrl+W`は変更していません。
 
 ## Python・TSX
 

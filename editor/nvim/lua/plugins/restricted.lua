@@ -5,6 +5,23 @@ return {
   { "nvim-treesitter/nvim-treesitter-textobjects", enabled = false },
   { "saghen/blink.cmp", opts = { fuzzy = { implementation = "lua" } } },
   {
+    "folke/which-key.nvim",
+    keys = { { "<c-w><space>", false } },
+    opts = function(_, opts)
+      -- Space+w has explicit window commands; Ctrl+W now closes the file.
+      opts.plugins = vim.tbl_deep_extend("force", opts.plugins or {}, { presets = { windows = false } })
+      local function remove_window_proxy(specs)
+        for _, spec in ipairs(specs) do
+          if type(spec) == "table" then
+            if spec[1] == "<leader>w" then spec.proxy = nil end
+            remove_window_proxy(spec)
+          end
+        end
+      end
+      remove_window_proxy(opts.spec or {})
+    end,
+  },
+  {
     "nvim-treesitter/nvim-treesitter",
     commit = "7caec274fd19c12b55902a5b795100d21531391f",
     build = false,

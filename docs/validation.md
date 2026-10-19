@@ -2,6 +2,12 @@
 
 初期導入の検証日: 2026-10-17（日本時間）
 
+## Ctrl+A / Ctrl+Wとウィンドウ操作の追加検証（2026-10-19）
+
+- Pythonテスト計28件PASS。Normal / Insert / Selectからの全選択、全選択のコピー・置き換え、Insertからのファイル閉じ、未保存内容の保持、`Space w`と既存の移動・分割ショートカットを実際のNeovim入力で確認。
+- 固定LazyVimを読み込んだ状態でも、Ctrl+A、Ctrl+Wの未保存保護、Snacksによるバッファ閉じ、`Space w v/h/l/d`、`Ctrl+h/l`がPASS。which-keyの旧Ctrl+W proxy・プリセットと旧Hydraキーの除去も確認。
+- 既存のOSC 52コピーと診断・コマンド出力テストもPASS。Windows Terminal実機からのキー送信は未検証。
+
 ## 挿入中の選択・任意Tailscale setupの追加検証（2026-10-19）
 
 - Neovim 0.11.5を起動し、実際のキー入力とマウスAPIで、挿入モード → Shift＋矢印 / マウスドラッグ → Selectモードへの遷移を確認。`Ctrl+C`での選択範囲のOSC 52送信、コピー後の選択維持、文字入力による置き換えがPASS。クリップボード信号を捕捉し、ホストのクリップボードは変更していない。固定LazyVimのキー設定を読み込んだ状態でもShift選択・コピー・置き換えがPASS。Windows Terminal実機からのキー送信は未検証。

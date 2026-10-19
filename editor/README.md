@@ -44,6 +44,8 @@ Neovim内で`Space ?`または`:Cheatsheet`を実行すると、[チートシー
 
 挿入モードではShift＋矢印またはマウスドラッグで文字を選択できます。この選択中は`Ctrl+C`で接続元へコピーし、そのまま文字を入力すると選択部分を置き換えます。Shift＋ドラッグはWindows Terminal自体の選択です。
 
+`Ctrl+A`は全選択、`Ctrl+W`は現在のファイルを閉じます（Normal / Insert / Select / Visual）。未保存なら閉じずに通知します。ウィンドウ操作は`Space w`にまとめ、`Space w s/v`で分割、`Space w h/j/k/l`で移動、`Space w d`でウィンドウを閉じます。既存の`Ctrl+h/j/k/l`も引き続き使えます。
+
 ## コマンド実行・職場からの診断収集
 
 `:EditorRun コマンド`で出力・エラー・終了コードを結果バッファに残せます。`:EditorRunLast`で再表示します。`:EditorReport`で現在のLSP状態を確認し、`:EditorReportSend 端末名`でTailscale経由でMacへ送れます。WindowsへのTailscale導入は不要です。Tailscaleは任意の機能で、`make`の必須依存には加えません。[接続準備と使い方](REMOTE-DIAGNOSTICS.md)を参照してください。
