@@ -1,7 +1,11 @@
 vim.g.lazyvim_python_lsp = "basedpyright"
 vim.g.lazyvim_python_ruff = "ruff"
 vim.g.lazyvim_blink_main = false
-vim.opt.clipboard = "" -- SSH clipboard support depends on the local terminal; use its copy action.
+-- OSC 52 sends explicit + register yanks through SSH to the local terminal.
+-- Keep normal y/p internal; unnamedplus would also request clipboard reads,
+-- which Windows Terminal may not answer. Paste with the terminal's paste key.
+vim.g.clipboard = "osc52"
+vim.opt.clipboard = ""
 vim.opt.updatetime = 300
 vim.opt.timeoutlen = 400
 vim.opt.swapfile = false

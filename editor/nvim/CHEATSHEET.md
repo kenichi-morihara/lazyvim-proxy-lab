@@ -11,7 +11,9 @@ Leaderキーは **Space** です。Spaceを押して少し待つとwhich-keyが�
 | `o` / `O` | 下 / 上に行を追加 |
 | `Esc` | ノーマルモードに戻る |
 | `u` / `Ctrl-r` | 元に戻す / やり直す |
-| `yy` / `dd` / `p` | 行をコピー / 削除 / 貼り付け |
+| `yy` / `dd` / `p` | Neovim内で行をコピー / 削除 / 貼り付け |
+| `v`で選択して`Space y` | 選択範囲をWindowsなど接続元のクリップボードへコピー |
+| `Space Y` | 現在行を接続元のクリップボードへコピー |
 | `gcc` / `gc` | 行 / 選択範囲をコメント化 |
 | `Ctrl-s` | 保存 |
 | `Space q q` | 終了 |
@@ -49,3 +51,12 @@ Pythonの推定型ヒントはbasedpyright、TypeScript/TSXはvtslsが表示し�
 4. `Space u h`でバッファのインラインヒントが有効か確認します。
 5. Pythonはプロジェクトvenvを有効にするか`.venv`を用意します。TS/TSXはプロジェクト依存をインストールし、TypeScriptと型定義が利用できるようにします。
 6. インラインヒントがない式は、カーソルを置いて`K`で型を確認できます。
+
+## WindowsからSSH接続したときのコピー・貼り付け
+
+- **Neovim → Windows:** `v`で選択して`Space y`。行全体なら`Space Y`。コピー先のアプリでは`Ctrl+V`で貼り付けます。
+- **Windows → Neovim:** Windows側でコピーし、Neovimを`i`で挿入モードにしてWindows Terminalの`Ctrl+Shift+V`で貼り付けます。
+- `y`と`p`はNeovim内のコピー・貼り付けです。接続元へのコピーは`Space y`を使います。`Ctrl+C`はNeovimでは通常コピー操作になりません。
+- 画面の文字をマウスで取りたいときは、Windows Terminalで**Shiftを押しながらドラッグ**し、`Ctrl+Shift+C`または右クリックでコピーできます。
+
+`Space y`はNeovim標準のOSC 52を使います。Linux側に`xclip`やWindowsの`clip.exe`を追加する必要はありません。OSC 52対応のターミナルが必要です。Windows Terminalで無効化されている場合は、プロファイル設定の`compatibility.allowOSC52`を確認してください。tmuxを使う場合は、そのOSC 52設定にも依存します。まずtmuxなしのSSH接続で確認できます。Windowsの古いコンソールや他のSSHクライアントでは、ターミナル側のコピー操作を使ってください。

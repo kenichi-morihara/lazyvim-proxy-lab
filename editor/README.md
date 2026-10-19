@@ -39,3 +39,5 @@ Neovimの任意provider（Python/Node/Ruby/Perl）は無効です。LSPは独立
 ## キーマップ早見表
 
 Neovim内で`Space ?`または`:Cheatsheet`を実行すると、[チートシート](nvim/CHEATSHEET.md)を開きます。Spaceを押して少し待つとwhich-keyがその場で利用できる操作を表示します。型ヒントが出ない場合の確認手順もチートシートに記載しています。
+
+接続元クリップボードへのコピーは選択後`Space y`、現在行は`Space Y`です。OSC 52を使うためSSH越しでも利用でき、追加プラグインや外部コマンドは不要です。Windows Terminalの貼り付けは挿入モードで`Ctrl+Shift+V`を使います。通常の`y`・`p`はNeovim内のレジスタを利用します。

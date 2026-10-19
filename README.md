@@ -170,8 +170,10 @@ Pythonのルート直下の`.venv`、または起動シェルの`VIRTUAL_ENV`を
 | 整形 / 名前変更 | `Space c f` / `Space c r` |
 | 診断の表示 | `Space c d` |
 | ターミナル | `Ctrl-/` |
+| チートシート | `Space ?` / `:Cheatsheet` |
+| 接続元クリップボードへコピー | 選択後`Space y` / 現在行`Space Y` |
 
-大きなファイルは構文ハイライトを抑えます。inlay hintsを有効にしています。Pythonの解析は開いているファイル中心です。デバッガー・AI補完は含めません。SSH越しのコピーはローカルターミナルの選択・コピーを使ってください。Nerd FontはMac側のターミナルに任意で設定します。
+大きなファイルは構文ハイライトを抑えます。inlay hintsを有効にしています。Pythonの解析は開いているファイル中心です。デバッガー・AI補完は含めません。SSH越しのコピーはOSC 52を使います。Windows Terminalでは選択後`Space y`、貼り付けは挿入モードで`Ctrl+Shift+V`です。詳しくは[チートシート](editor/nvim/CHEATSHEET.md#windowsからssh接続したときのコピー貼り付け)を参照してください。Nerd Fontは接続元のターミナルに任意で設定します。
 
 ## dotfilesへ移す
 
