@@ -10,6 +10,8 @@ vim.opt.clipboard = ""
 vim.opt.mouse = "a"
 vim.opt.selectmode = { "mouse", "key" }
 vim.opt.keymodel = { "startsel", "stopsel" }
+-- Use a thin vertical cursor in every mode, including Normal and Select.
+vim.opt.guicursor = "a:ver25"
 vim.opt.updatetime = 300
 vim.opt.timeoutlen = 400
 vim.opt.swapfile = false
