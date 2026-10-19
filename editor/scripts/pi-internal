@@ -1,0 +1,66 @@
+#!/usr/bin/env python3
+# proxy-lab managed internal Pi launcher
+"""Launch pinned Pi with an isolated internal provider and no startup downloads."""
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+from urllib.parse import urlsplit
+
+
+def main():
+    prefix = Path(__file__).resolve().parent.parent
+    cli = prefix / "share/editor-pi/node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js"
+    if not cli.is_file() or not shutil.which("node"):
+        raise ValueError("Pi is missing. Run make setup-pi and make Node.js available on PATH.")
+    env = dict(os.environ, PI_OFFLINE="1", PI_SKIP_VERSION_CHECK="1", PI_TELEMETRY="0")
+    if sys.argv[1:] in (["--version"], ["--help"], ["-h"]):
+        return subprocess.call(["node", str(cli), *sys.argv[1:]], env=env)
+    required = ("INTERNAL_AI_BASE_URL", "INTERNAL_AI_MODEL", "INTERNAL_AI_API_KEY")
+    missing = [name for name in required if not env.get(name)]
+    if missing:
+        raise ValueError("Set " + ", ".join(missing) + ". See editor/AI-SETUP.md.")
+    url = urlsplit(env["INTERNAL_AI_BASE_URL"])
+    if url.scheme not in ("https", "http") or not url.hostname or url.username or url.password or url.query or url.fragment:
+        raise ValueError("INTERNAL_AI_BASE_URL must be an HTTP(S) base URL without credentials, query or fragment.")
+    if url.scheme == "http" and url.hostname not in ("localhost", "127.0.0.1", "::1"):
+        raise ValueError("Use HTTPS for the internal AI; HTTP is allowed only for localhost tests.")
+    api = env.get("INTERNAL_AI_API", "openai-completions")
+    if api not in ("openai-completions", "openai-responses"):
+        raise ValueError("INTERNAL_AI_API must be openai-completions or openai-responses.")
+    header = env.get("INTERNAL_AI_AUTH_HEADER", "Authorization")
+    provider = {"baseUrl": env["INTERNAL_AI_BASE_URL"], "api": api,
+                "apiKey": "${INTERNAL_AI_API_KEY}", "authHeader": header.lower() == "authorization",
+                "models": [{"id": env["INTERNAL_AI_MODEL"], "input": ["text"], "reasoning": False}]}
+    if header.lower() != "authorization":
+        if not header or any(not (char.isascii() and (char.isalnum() or char == "-")) for char in header):
+            raise ValueError("INTERNAL_AI_AUTH_HEADER must be a valid header name.")
+        provider["headers"] = {header: "${INTERNAL_AI_API_KEY}"}
+    # Runtime config contains no literal API key, and is separate from ~/.pi/agent.
+    # One temporary config per process avoids clashes between concurrent sessions.
+    state = Path(env.get("XDG_STATE_HOME", Path.home() / ".local/state")) / "editor-pi"
+    os.umask(0o077)
+    state.mkdir(parents=True, exist_ok=True, mode=0o700)
+    state.chmod(0o700)
+    sessions = state / "sessions"
+    sessions.mkdir(exist_ok=True, mode=0o700)
+    with tempfile.TemporaryDirectory(prefix="runtime-", dir=state) as directory:
+        config = Path(directory)
+        (config / "models.json").write_text(json.dumps({"providers": {"internal": provider}}))
+        (config / "settings.json").write_text(json.dumps({"enableInstallTelemetry": False, "enableAnalytics": False}))
+        env["PI_CODING_AGENT_DIR"] = directory
+        command = ["node", str(cli), *sys.argv[1:], "--provider", "internal", "--model", env["INTERNAL_AI_MODEL"],
+                   "--models", "internal/" + env["INTERNAL_AI_MODEL"], "--offline", "--no-extensions",
+                   "--session-dir", str(sessions)]
+        return subprocess.call(command, env=env)
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except (OSError, ValueError) as error:
+        print("ERROR: " + str(error), file=sys.stderr)
+        sys.exit(1)

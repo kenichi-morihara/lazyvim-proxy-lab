@@ -9,6 +9,7 @@
 ```bash
 make          # 事前確認から導入・起動確認まで
 make doctor   # インストールせず事前確認だけ
+make setup-pi # 任意: proxy環境向けPiを別途導入
 ```
 
 `make install`は`make`と同じです。Neovim 0.11.5（LuaJIT）がPATHにあれば再利用し、なければ固定版をユーザー領域へビルドします。Neovimや言語ツールが未導入であることは`doctor`の失敗理由にしません。必要なOS依存が不足していれば名前を表示して停止します。

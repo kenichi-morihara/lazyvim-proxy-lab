@@ -19,7 +19,7 @@ class InstallTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.repo = self.root / 'repo with spaces'
         self.editor = self.repo / 'editor'
-        shutil.copytree(ROOT / 'editor', self.editor, ignore=shutil.ignore_patterns('__pycache__'))
+        shutil.copytree(ROOT / 'editor', self.editor, ignore=shutil.ignore_patterns('__pycache__', 'node_modules'))
         shutil.copy2(ROOT / 'Makefile', self.repo / 'Makefile')
         self.bin = self.root / 'bin'
         self.bin.mkdir()
@@ -37,7 +37,7 @@ class InstallTests(unittest.TestCase):
             (self.bin / name).symlink_to(shutil.which(name))
         # Each stub represents a stage, not the internals of package installation.
         # Real config placement is kept so a failed preflight cannot silently overwrite it.
-        for stage in ('build-neovim', 'install-language-tools', 'install-plugins', 'install-parsers'):
+        for stage in ('build-neovim', 'install-language-tools', 'install-plugins', 'install-parsers', 'install-pi'):
             code = '''import os
 from pathlib import Path
 stage = Path(__file__).name
@@ -97,6 +97,21 @@ prefix.mkdir(parents=True, exist_ok=True)
 
     def stages(self):
         return self.log.read_text().splitlines() if self.log.exists() else []
+
+    def test_setup_pi_is_independent_of_editor_preflight(self):
+        for name in ('cc', 'c++', 'cmake', 'ninja', 'msgfmt'):
+            (self.bin / name).unlink()
+        result = self.run_make('setup-pi', standalone=True)
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertEqual(self.stages(), ['install-pi'])
+        self.assertFalse((self.home / '.config/nvim').exists())
+
+    def test_setup_pi_failure_reports_the_optional_retry_target(self):
+        self.env['TEST_FAIL'] = 'install-pi'
+        result = self.run_make('setup-pi')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('rerun make setup-pi', result.stdout)
+        self.assertEqual(self.stages(), ['install-pi'])
 
     def test_doctor_rejects_git_too_old_for_diffview(self):
         self.tool('git', "printf 'git version 2.30.9\\n'\n")

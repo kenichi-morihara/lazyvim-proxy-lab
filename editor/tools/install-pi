@@ -1,0 +1,46 @@
+#!/usr/bin/env python3
+"""Install the optional pinned Pi CLI from npm only, without lifecycle hooks."""
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import sys
+
+TOOLS = Path(__file__).resolve().parent
+prefix = Path(os.environ.get("EDITOR_PREFIX") or Path.home() / ".local").expanduser().resolve()
+missing = [name for name in ("node", "npm", "git", "bash", "rg", "fd") if not shutil.which(name)]
+if missing:
+    raise SystemExit("Missing Pi prerequisites: " + ", ".join(missing) + ". Install using the OS package manager, then rerun make setup-pi.")
+version = subprocess.check_output(["node", "--version"], text=True).strip()
+match = re.fullmatch(r"v(\d+)\.(\d+)\.(\d+)", version)
+if not match or tuple(map(int, match.groups())) < (22, 19, 0):
+    raise SystemExit("Pi requires Node.js >= 22.19.0; rerun make setup-pi after upgrading.")
+destination = prefix / "bin/pi"
+marker = b"# proxy-lab managed internal Pi launcher"
+if destination.is_symlink() or (destination.exists() and marker not in destination.read_bytes()[:200]):
+    raise SystemExit("Refusing to overwrite existing pi executable: " + str(destination))
+runtime = prefix / "share/editor-pi"
+runtime.mkdir(parents=True, exist_ok=True)
+for name in ("package.json", "package-lock.json"):
+    shutil.copy2(TOOLS / "pi" / name, runtime / name)
+subprocess.run(["npm", "ci", "--prefix", str(runtime), "--ignore-scripts", "--omit=optional", "--no-audit", "--no-fund"], check=True)
+cli = runtime / "node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js"
+env = dict(os.environ, PI_OFFLINE="1", PI_SKIP_VERSION_CHECK="1", PI_TELEMETRY="0")
+expected = json.loads((TOOLS / "pi/package.json").read_text())["dependencies"]["@earendil-works/pi-coding-agent"]
+actual = subprocess.check_output(["node", str(cli), "--version"], env=env, text=True).strip()
+if actual != expected:
+    raise SystemExit("Unexpected Pi version; setup was not completed")
+destination.parent.mkdir(parents=True, exist_ok=True)
+source = (TOOLS.parent / "scripts/pi-internal").read_text().split("\n", 1)[1]
+temporary = destination.with_name(".pi-install-" + str(os.getpid()))
+try:
+    temporary.write_text("#!" + sys.executable + "\n" + source)
+    temporary.chmod(0o755)
+    temporary.replace(destination)
+finally:
+    temporary.unlink(missing_ok=True)
+print(f"PASS Pi {actual} installed: {destination}")
+print("Set INTERNAL_AI_BASE_URL, INTERNAL_AI_MODEL and INTERNAL_AI_API_KEY, then run pi.")
+print("Proxy and CA use the caller's environment. See editor/AI-SETUP.md.")

@@ -1,0 +1,8 @@
+{
+  "name": "proxy-lab-pi-tools",
+  "private": true,
+  "version": "1.0.0",
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "1.3.0"
+  }
+}

@@ -129,12 +129,17 @@ class Installer:
         print("PASS Tailscale setup. In Neovim, run :EditorTailscale netcheck.", flush=True)
         return 0
 
+    def setup_pi(self):
+        self.run_helper("tools/install-pi")
+        return 0
+
 
 def main():
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("doctor")
     subparsers.add_parser("setup-tailscale")
+    subparsers.add_parser("setup-pi")
     install = subparsers.add_parser("install")
     install.add_argument("--copy", action="store_true")
     args = parser.parse_args()
@@ -144,9 +149,11 @@ def main():
             return 0 if installer.preflight() else 1
         if args.command == "setup-tailscale":
             return installer.setup_tailscale()
+        if args.command == "setup-pi":
+            return installer.setup_pi()
         return installer.install(args.copy)
     except (OSError, RuntimeError, subprocess.SubprocessError) as error:
-        retry = "make setup-tailscale" if args.command == "setup-tailscale" else "make"
+        retry = "make " + args.command if args.command.startswith("setup-") else "make"
         print(f"ERROR: {error}\nFix the reported issue and rerun {retry}; completed stages and caches can be reused.", file=sys.stderr)
         return 1
 

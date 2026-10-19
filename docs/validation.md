@@ -2,6 +2,16 @@
 
 初期導入の検証日: 2026-10-17（日本時間）
 
+## 任意のPiセットアップ（2026-10-19）
+
+- `make setup-pi`を通常導入・Tailscaleから分離。Neovim用の事前確認や本体ビルドを呼び出さないこと、失敗時に専用の再実行コマンドを表示することをテスト。
+- `editor/`単独を一時ディレクトリへコピーし、Rocky Linux 9 ARM64の入れ子Docker内・一般ユーザー・制限付きmitmproxyでPi 1.3.0のnpm導入と再実行、`pi --version`がPASS。Node 22.23.2 / npm 10.9.8を使用。GitHub Release・archive・rawの許可は追加していません。
+- npm lockの118件すべての取得先が`registry.npmjs.org`であることを確認。npm lifecycle hookとoptional dependencyを無効化。
+- 長時間起動済みだったdev containerのCAが現在のproxyと不一致だったため、テストコマンドの`NODE_EXTRA_CA_CERTS`と`npm_config_cafile`に現在の公開CAを指定して検証。システムのCA設定変更やTLS検証無効化はしていません。
+- 導入済みPiで`tests/pi_test.py`がPASS。ローカルのChat Completions互換モックに対するストリーム応答、readツール実行と結果の再送、Bearer / api-key認証、実行時設定の終了時削除を確認。自動外部通信は検出用proxyに到達していません。
+- Pythonテスト全32件のうち31件PASS、実Pi導入が必要な1件は通常実行ではskipし、上記Linux環境で別途PASS。
+- 職場の実APIとの接続、Responses互換モード、AMD64は未検証。実リクエスト形式によって変換アダプターが必要です。
+
 ## スクロールバー追加（2026-10-19）
 
 - nvim-scrollviewをcommit `b9e6ee00e9e20330b426fbec47812c2213d371ca`に固定。取得はGitのみ。
