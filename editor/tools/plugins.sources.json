@@ -19,6 +19,7 @@
   "nui.nvim": "https://github.com/MunifTanjim/nui.nvim.git",
   "nvim-lint": "https://github.com/mfussenegger/nvim-lint.git",
   "nvim-lspconfig": "https://github.com/neovim/nvim-lspconfig.git",
+  "nvim-scrollview": "https://github.com/dstein64/nvim-scrollview.git",
   "nvim-treesitter": "https://github.com/nvim-treesitter/nvim-treesitter.git",
   "nvim-ts-autotag": "https://github.com/windwp/nvim-ts-autotag.git",
   "persistence.nvim": "https://github.com/folke/persistence.nvim.git",

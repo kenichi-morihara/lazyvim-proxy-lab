@@ -2,6 +2,12 @@
 
 初期導入の検証日: 2026-10-17（日本時間）
 
+## スクロールバー追加（2026-10-19）
+
+- nvim-scrollviewをcommit `b9e6ee00e9e20330b426fbec47812c2213d371ca`に固定。取得はGitのみ。
+- macOS ARM64 / Neovim 0.11.5 / 固定LazyVimで、500行のバッファにスクロールバーのウィンドウが生成され、実行時エラーがなく、縦棒カーソルの設定も維持されることを確認。
+- Windows Terminal経由のマウスドラッグは実機未検証。
+
 ## Diffviewの追加検証（2026-10-19）
 
 - Diffviewをcommit `4516612fe98ff56ae0415a259ff6361a89419b0a`に固定し、Git cloneで取得。ソースURL一覧とlazy-lockを同期。
