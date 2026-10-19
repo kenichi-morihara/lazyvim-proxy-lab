@@ -52,6 +52,23 @@ Pythonの推定型ヒントはbasedpyright、TypeScript/TSXはvtslsが表示し�
 5. Pythonはプロジェクトvenvを有効にするか`.venv`を用意します。TS/TSXはプロジェクト依存をインストールし、TypeScriptと型定義が利用できるようにします。
 6. インラインヒントがない式は、カーソルを置いて`K`で型を確認できます。
 
+## コマンドの結果・診断を読む
+
+| コマンド / キー | 操作 |
+|---|---|
+| `:EditorRun python3 --version` | コマンドを実行し、出力・エラー・終了コードを保持 |
+| `Space !` | 実行するコマンドを入力 |
+| `:EditorRunLast` | 直前のコマンド結果を再表示 |
+| `:EditorRunStop` / 結果画面の`Ctrl-C` | 実行中コマンドを停止 |
+| 結果画面の`q` | 画面を閉じる（結果は残る） |
+| `:EditorReport` | 問題のファイルで現在のLSP・型ヒント状態を確認 |
+| `:EditorReport!` | マスキングしたエラー本文・直近メッセージも含めて確認 |
+| `:EditorReportSave` | 編集後の診断JSONをローカルに保存 |
+| `:EditorReportSend my-mac` | 確認した診断JSONをTailscaleのTaildropで送信 |
+| `:EditorTailscale status` / `:EditorTailscale netcheck` | 接続状態を結果バッファに表示 |
+
+診断は問題のPython/TSXファイルから作成します。`EditorReport!`はメッセージの機密情報を完全に判別できないため、プレビューを編集して必要な項目だけを送ります。コマンド出力やプロジェクトのソースファイルは自動送信しません。対話操作には`:terminal`を使います。
+
 ## WindowsからSSH接続したときのコピー・貼り付け
 
 - **Neovim → Windows:** `v`で選択して`Space y`。行全体なら`Space Y`。コピー先のアプリでは`Ctrl+V`で貼り付けます。

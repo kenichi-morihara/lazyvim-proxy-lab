@@ -173,6 +173,8 @@ Pythonのルート直下の`.venv`、または起動シェルの`VIRTUAL_ENV`を
 | チートシート | `Space ?` / `:Cheatsheet` |
 | 接続元クリップボードへコピー | 選択後`Space y` / 現在行`Space Y` |
 
+コマンドの出力を残すには`:EditorRun コマンド`、読み直すには`:EditorRunLast`を使います。職場のLSP状態は`:EditorReport`で確認し、`:EditorReportSend 端末名`でTailscale経由でMacへ送信できます。準備と収集内容は[職場からの診断収集](editor/REMOTE-DIAGNOSTICS.md)を参照してください。
+
 大きなファイルは構文ハイライトを抑えます。inlay hintsを有効にしています。Pythonの解析は開いているファイル中心です。デバッガー・AI補完は含めません。SSH越しのコピーはOSC 52を使います。Windows Terminalでは選択後`Space y`、貼り付けは挿入モードで`Ctrl+Shift+V`です。詳しくは[チートシート](editor/nvim/CHEATSHEET.md#windowsからssh接続したときのコピー貼り付け)を参照してください。Nerd Fontは接続元のターミナルに任意で設定します。
 
 ## dotfilesへ移す
@@ -185,6 +187,8 @@ Pythonのルート直下の`.venv`、または起動シェルの`VIRTUAL_ENV`を
 
 ```bash
 python3 -m unittest discover -s tests -p '*_test.py'
+nvim --headless -u NONE -l tests/support.lua
+nvim --headless -u NONE -l tests/clipboard.lua
 # 以下はbootstrapとサンプル依存導入を済ませたdev container内
 ./tests/network
 ./tests/check-editors

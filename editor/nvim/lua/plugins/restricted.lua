@@ -40,6 +40,8 @@ return {
             local root = config.root_dir or vim.fn.getcwd()
             local python = vim.env.VIRTUAL_ENV and (vim.env.VIRTUAL_ENV .. "/bin/python") or (root .. "/.venv/bin/python")
             if vim.fn.executable(python) == 1 then
+              config.settings = config.settings or {}
+              config.settings.python = config.settings.python or {}
               config.settings.python.pythonPath = python
             end
           end,

@@ -32,6 +32,19 @@ local function main()
   local found = false
   for _, item in ipairs(items) do if item.label:find("greet") then found = true end end
   check(found, "greet completion available")
+  check(client:supports_method("textDocument/inlayHint", 0), "server supports inline type hints")
+  local hints = client:request_sync("textDocument/inlayHint", {
+    textDocument = params.textDocument,
+    range = { start = { line = 0, character = 0 }, ["end"] = { line = vim.api.nvim_buf_line_count(0), character = 0 } },
+  }, 30000, 0)
+  check(hints and hints.result and #hints.result > 0, "inline type hints returned")
+  check(vim.wait(3000, function() return vim.lsp.inlay_hint.is_enabled({ bufnr = 0 }) end), "inline type hints enabled in buffer")
+  local report = require("editor.report").collect(vim.api.nvim_get_current_buf(), false)
+  local reported = false
+  for _, entry in ipairs(report.clients) do
+    if entry.name == name and entry.supports.inlay_hint then reported = true end
+  end
+  check(reported and report.diagnostic_total > 0, "report captures the actual attached LSP and diagnostics")
   local lang = vim.treesitter.language.get_lang(vim.bo.filetype)
   local parser = vim.treesitter.get_parser(0, lang)
   check(parser and #parser:parse() > 0, "Tree-sitter parser works")
