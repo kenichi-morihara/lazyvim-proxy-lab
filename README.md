@@ -48,7 +48,7 @@ Gitの認証が必要な場合は、利用環境の認証方法を事前に設�
 
 | 用途 | 必要なもの |
 |---|---|
-| 入口・取得・展開 | Bash、Make、Git 2.19以上、tar、gzip、unzip、CA証明書 |
+| 入口・取得・展開 | Bash、Make、Git 2.31以上、tar、gzip、unzip、CA証明書 |
 | parserのビルド | C/C++コンパイラ |
 | Neovim本体のビルド時のみ | CMake、Ninja、gettext（`msgfmt`） |
 | 言語ツール | Python 3.11以上とvenv/pip、Node.js 22以降とnpm（検証済みは22） |

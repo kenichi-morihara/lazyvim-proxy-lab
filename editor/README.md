@@ -15,6 +15,8 @@ make doctor   # インストールせず事前確認だけ
 
 `scripts/bootstrap`と`scripts/doctor`は互換用の入口として残しています。個別の工程はMakeから呼ぶ内部処理として管理し、通常は直接実行する必要はありません。
 
+Git 2.31以上が必要です。差分は`Space g d`でDiffviewを開き、`Tab` / `Shift+Tab`でファイルを切り替えます。`Space g H`は現在ファイルの履歴、`q` / `Ctrl+W` / `Space g q`は差分画面を閉じます。ブランチ比較は`:DiffviewOpen origin/main...HEAD`です。プラグインは固定commitをGitで取得し、配布バイナリは使いません。
+
 - `tools/versions.json`: Neovim、lazy.nvim、言語ツールのバージョン情報
 - `tools/sources.lock.json`: NeovimのGit依存commit
 - `tools/package-lock.json` / `requirements.lock`: npm依存とpipのhash lock

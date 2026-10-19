@@ -98,6 +98,13 @@ prefix.mkdir(parents=True, exist_ok=True)
     def stages(self):
         return self.log.read_text().splitlines() if self.log.exists() else []
 
+    def test_doctor_rejects_git_too_old_for_diffview(self):
+        self.tool('git', "printf 'git version 2.30.9\\n'\n")
+        result = self.run_make('doctor')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('Git >= 2.31 (Diffview)', result.stdout)
+        self.assertEqual(self.stages(), [])
+
     def test_doctor_allows_missing_neovim_and_language_tools_without_writes(self):
         before = set(self.home.rglob('*'))
         result = self.run_make('doctor')

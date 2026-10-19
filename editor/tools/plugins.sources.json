@@ -4,6 +4,7 @@
   "bufferline.nvim": "https://github.com/akinsho/bufferline.nvim.git",
   "catppuccin": "https://github.com/catppuccin/nvim.git",
   "conform.nvim": "https://github.com/stevearc/conform.nvim.git",
+  "diffview.nvim": "https://github.com/sindrets/diffview.nvim.git",
   "flash.nvim": "https://github.com/folke/flash.nvim.git",
   "friendly-snippets": "https://github.com/rafamadriz/friendly-snippets.git",
   "gitsigns.nvim": "https://github.com/lewis6991/gitsigns.nvim.git",

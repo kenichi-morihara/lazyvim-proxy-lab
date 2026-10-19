@@ -2,6 +2,13 @@
 
 初期導入の検証日: 2026-10-17（日本時間）
 
+## Diffviewの追加検証（2026-10-19）
+
+- Diffviewをcommit `4516612fe98ff56ae0415a259ff6361a89419b0a`に固定し、Git cloneで取得。ソースURL一覧とlazy-lockを同期。
+- macOS ARM64 / Neovim 0.11.5 / 固定LazyVimで`tests/diffview.lua`がPASS。一時Gitリポジトリの実差分、明示revision比較、ファイル履歴、`Space w l`、`q`と`Ctrl+W`による元タブへの復帰、元バッファの保持、実行時エラーがないことを確認。
+- Pythonテスト計29件PASS。Git 2.30を事前確認で拒否し、設定導入を開始しないことも確認。
+- 職場のWindows Terminal・proxy下での追加プラグイン導入は未検証。既存と同じGit取得方式で、配布バイナリ・追加のビルド処理は使用しません。
+
 ## Ctrl+A / Ctrl+Wとウィンドウ操作の追加検証（2026-10-19）
 
 - Pythonテスト計28件PASS。Normal / Insert / Selectからの全選択、全選択のコピー・置き換え、Insertからのファイル閉じ、未保存内容の保持、`Space w`と既存の移動・分割ショートカットを実際のNeovim入力で確認。

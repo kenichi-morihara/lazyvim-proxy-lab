@@ -20,6 +20,12 @@ local function close_file()
     vim.notify("Unsaved changes: save with Ctrl+S before closing.", vim.log.levels.WARN)
     return
   end
+  -- A Diffview owns several buffers: close its tab instead of deleting one.
+  local diffview = package.loaded["diffview.lib"]
+  if diffview and diffview.get_current_view() then
+    vim.cmd.DiffviewClose()
+    return
+  end
   if _G.Snacks then
     Snacks.bufdelete()
   else

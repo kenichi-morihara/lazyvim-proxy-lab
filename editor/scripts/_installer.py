@@ -69,8 +69,8 @@ class Installer:
                 missing.append(name)
         if self.executable("git"):
             version = re.search(r"git version (\d+)\.(\d+)", self.output("git", "--version"))
-            if not version or tuple(map(int, version.groups())) < (2, 19):
-                missing.append("Git >= 2.19")
+            if not version or tuple(map(int, version.groups())) < (2, 31):
+                missing.append("Git >= 2.31 (Diffview)")
         if self.executable("node"):
             version = re.match(r"v(\d+)", self.output("node", "--version").strip())
             if not version or int(version[1]) < 22:
