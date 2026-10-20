@@ -241,3 +241,14 @@ HTTPではuserヘッダーとBearerがTLSで暗号化されないため、許可
 通常の起動ではResponsesの`input`・`tools`を送信し、`function_call`と
 `function_call_output`をPiが処理します。画像の独自5項目やCookieへは変換しません。
 この方式は職場APIが標準Responses形式を公開している前提です。実職場APIでの動作は未確認です。
+
+## Pi起動後の接続確認
+
+チャット入力欄で`/ai-status`を実行すると、設定中のモデルID、ResponsesのPOST先、
+ヘッダー名、Bearer設定の有無、直近の失敗詳細を表示します。API通信はしません。
+user値・Bearerは表示しません。このモデルIDは設定値で、サーバー側の登録済み一覧ではありません。
+モデルの変更は`make config`で行い、Piを再起動します。
+
+Responses通信の失敗時にはチャットのエラー表示にもモデルID・POST先・エラー詳細が出ます。
+user値・Bearerは伏せ、詳細は最大2000文字に制限します。
+`model is not registered`などの場合は、職場サービスに登録された正確なモデルIDを設定してください。

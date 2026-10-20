@@ -1,4 +1,5 @@
 // Preserve the standard Responses protocol; only configure gateway authentication.
+import { createAssistantMessageEventStream } from '@earendil-works/pi-ai';
 import { streamSimple } from '@earendil-works/pi-ai/api/openai-responses';
 
 export function responsesModel(env = process.env) {
@@ -18,6 +19,29 @@ export function responsesModel(env = process.env) {
     cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } };
 }
 
+let lastError = '';
+
+export function redactError(value, env = process.env) {
+  let text = String(value || 'No error detail returned');
+  for (const secret of [env.INTERNAL_AI_API_KEY, env.INTERNAL_AI_USER].filter(Boolean).sort((a, b) => b.length - a.length)) {
+    text = text.split(secret).join('[REDACTED]');
+  }
+  return text.replace(/Bearer\s+[^\s"',;}]+/gi, 'Bearer [REDACTED]')
+    .replace(/sk-(?:proj-)?[A-Za-z0-9_-]{12,}/g, '[REDACTED]')
+    .replace(/[\x00-\x08\x0b-\x1f\x7f]/g, '').slice(0, 2000);
+}
+
+export function connectionStatus(model = responsesModel(), env = process.env) {
+  return `API: Responses\nModel ID: ${model.id}\nPOST: ${model.baseUrl.replace(/\/$/, '')}/responses\nUser header: ${env.INTERNAL_AI_USER_HEADER || 'user'} (value hidden)\nBearer: ${env.INTERNAL_AI_API_KEY ? 'set' : 'not set'}`;
+}
+
+function requestError(model, detail) {
+  const safe = redactError(detail);
+  const hint = /model.*(?:not.*registered|not.*found|does not exist)|model_not_found/i.test(safe)
+    ? '\nCheck the exact model ID registered by your service; change it with make config.' : '';
+  return 'AI request failed\n' + redactError(connectionStatus(model)) + '\nDetails: ' + safe + hint;
+}
+
 export function responsesStream(model, context, options = {}) {
   const env = process.env;
   const headers = { [env.INTERNAL_AI_USER_HEADER || 'user']: env.INTERNAL_AI_USER };
@@ -26,16 +50,44 @@ export function responsesStream(model, context, options = {}) {
     headers[header] = header.toLowerCase() === 'authorization'
       ? `Bearer ${env.INTERNAL_AI_API_KEY}` : env.INTERNAL_AI_API_KEY;
   }
-  return streamSimple(model, context, {
+  const inner = streamSimple(model, context, {
     ...options, apiKey: env.INTERNAL_AI_API_KEY || 'unused',
     headers: { ...options.headers, ...headers,
       ...(!env.INTERNAL_AI_API_KEY || header.toLowerCase() !== 'authorization'
         ? { Authorization: null } : {}) },
   });
+  const output = createAssistantMessageEventStream();
+  (async () => {
+    try {
+      for await (const event of inner) {
+        if (event.type === 'error') {
+          lastError = requestError(model, event.error.errorMessage);
+          event.error.errorMessage = lastError;
+        }
+        output.push(event);
+      }
+    } catch (error) {
+      lastError = requestError(model, error?.message);
+      output.push({ type: 'error', reason: options.signal?.aborted ? 'aborted' : 'error', error: {
+        role: 'assistant', content: [], api: model.api, provider: model.provider, model: model.id,
+        stopReason: options.signal?.aborted ? 'aborted' : 'error', errorMessage: lastError, timestamp: Date.now(),
+        usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0,
+          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
+      } });
+    } finally { output.end(); }
+  })();
+  return output;
 }
 
 export default function (pi) {
   const env = process.env;
+  pi.registerCommand('ai-status', {
+    description: 'Show configured model, Responses endpoint and the last failure (secrets hidden)',
+    async handler() {
+      pi.sendMessage({ customType: 'ai-status', content: redactError(connectionStatus()) +
+        (lastError ? '\n\nLast failure:\n' + lastError : ''), display: true }, { triggerTurn: false });
+    },
+  });
   pi.registerProvider('internal', {
     api: 'openai-responses', apiKey: env.INTERNAL_AI_API_KEY || 'unused',
     baseUrl: env.INTERNAL_AI_BASE_URL, models: [responsesModel()], streamSimple: responsesStream,

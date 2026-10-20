@@ -34,7 +34,7 @@ try {
     console.log('PASS API returned the diagnostic tool name and nonce; no tool executed');
   }
 } catch (error) {
-  console.error(/^COMPANY_[A-Z0-9_]+$/.test(error.message) || error.message.startsWith('Set ') ? error.message : 'Pi configuration/probe failed (details hidden)');
+  console.error(/^COMPANY_[A-Z0-9_]+$/.test(error.message) || error.message.startsWith('Set ') || error.message.startsWith('AI request failed\n') ? error.message : 'Pi configuration/probe failed (details hidden)');
   if (error.message === 'COMPANY_TOOLS_NOT_CONFIRMED') console.error('HTTP success or plain text does not prove tool support; no tool was executed. Try the explicit json mode if native tools are unsupported.');
   process.exitCode = 1;
 }
