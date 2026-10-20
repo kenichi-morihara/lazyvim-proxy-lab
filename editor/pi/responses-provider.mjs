@@ -3,7 +3,7 @@ import { streamSimple } from '@earendil-works/pi-ai/api/openai-responses';
 
 export function responsesModel(env = process.env) {
   const url = new URL(env.INTERNAL_AI_BASE_URL);
-  if ((url.protocol !== 'https:' && !(url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname))) ||
+  if ((url.protocol !== 'https:' && !(url.protocol === 'http:' && (['localhost', '127.0.0.1', '[::1]'].includes(url.hostname) || env.INTERNAL_AI_ALLOW_HTTP === '1'))) ||
       url.username || url.password || url.search || url.hash) throw new Error('Invalid Responses base URL');
   const userHeader = env.INTERNAL_AI_USER_HEADER || 'user';
   const keyHeader = env.INTERNAL_AI_AUTH_HEADER || 'Authorization';

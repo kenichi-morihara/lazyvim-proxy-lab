@@ -37,8 +37,12 @@ def main():
     url = urlsplit(base)
     if url.scheme not in ('https', 'http') or not url.hostname or url.username or url.password or url.query or url.fragment:
         raise SetupError('Enter a base URL without credentials, query or fragment.')
+    allow_http = False
     if url.scheme == 'http' and url.hostname not in ('localhost', '127.0.0.1', '::1'):
-        raise SetupError('Use HTTPS; HTTP is allowed only for localhost tests.')
+        print('HTTP sends the user header and Bearer token without TLS encryption.')
+        allow_http = input('Allow HTTP for this internal endpoint? [y/N]: ').strip().lower() in ('y', 'yes')
+        if not allow_http:
+            raise SetupError('HTTP was not enabled. Use HTTPS or explicitly allow the internal HTTP endpoint.')
     if url.path.endswith(('/responses', '/chat/completions')):
         raise SetupError('Enter the base URL without /responses or /chat/completions.')
     model = ask('Model', 'INTERNAL_AI_MODEL', 'gpt-6.1-sol')
@@ -57,6 +61,8 @@ def main():
                 INTERNAL_AI_BASE_URL=base, INTERNAL_AI_MODEL=model,
                 INTERNAL_AI_USER_HEADER=header, INTERNAL_AI_USER=user,
                 INTERNAL_AI_API_KEY=token, INTERNAL_AI_AUTH_HEADER='Authorization')
+    if allow_http:
+        data['INTERNAL_AI_ALLOW_HTTP'] = '1'
     print('Optional network settings. Enter inherits the environment unless a saved value exists; - clears a saved value.')
     for label, key in [('HTTPS proxy', 'HTTPS_PROXY'), ('HTTP proxy', 'HTTP_PROXY'),
                        ('No-proxy hosts', 'NO_PROXY'), ('Additional CA PEM file', 'NODE_EXTRA_CA_CERTS')]:

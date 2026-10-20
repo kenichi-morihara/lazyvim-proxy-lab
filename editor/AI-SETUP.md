@@ -225,7 +225,10 @@ APIキーも必要なら`INTERNAL_AI_API_KEY`を追加し、既定のBearer認�
 独自キー用の`INTERNAL_AI_AUTH_HEADER`も引き続き使用できます。
 ヘッダー値は環境変数から読み込み、一時設定ファイルに実値を保存しません。
 SDKのデバッグログは無効にします。HTTPSと呼び出し元のproxy・CA設定を使います。
-HTTPはlocalhostのテストに限ります。
+社内接続先がHTTPの場合は、対話設定のHTTP許可に`y`を入力します。
+この選択は`INTERNAL_AI_ALLOW_HTTP=1`として保存され、起動・診断の両方に反映されます。
+HTTPではuserヘッダーとBearerがTLSで暗号化されないため、許可した社内接続先に限って使用してください。
+環境変数だけで設定する場合も、同じ変数を明示指定します。
 
 `PROBE=1`は`diagnostic_echo`のツール名とランダムnonceを確認し、ツールを実行しません。
 通常の起動ではResponsesの`input`・`tools`を送信し、`function_call`と

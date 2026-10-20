@@ -57,8 +57,8 @@ def main():
         url = urlsplit(env["INTERNAL_AI_BASE_URL"])
         if url.scheme not in ("https", "http") or not url.hostname or url.username or url.password or url.query or url.fragment:
             raise ValueError("INTERNAL_AI_BASE_URL must be an HTTP(S) base URL without credentials, query or fragment.")
-        if url.scheme == "http" and url.hostname not in ("localhost", "127.0.0.1", "::1"):
-            raise ValueError("Use HTTPS for the internal AI; HTTP is allowed only for localhost tests.")
+        if url.scheme == "http" and url.hostname not in ("localhost", "127.0.0.1", "::1") and env.get("INTERNAL_AI_ALLOW_HTTP") != "1":
+            raise ValueError("Use HTTPS or explicitly set INTERNAL_AI_ALLOW_HTTP=1 for an internal HTTP endpoint.")
         api = env.get("INTERNAL_AI_API", "openai-responses")
         if api not in ("openai-completions", "openai-responses"):
             raise ValueError("INTERNAL_AI_API must be openai-completions or openai-responses.")

@@ -51,6 +51,19 @@ class ConfigTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 config.save_config({'XDG_CONFIG_HOME': str(root / 'another')}, {})
 
+    def test_wizard_saves_explicit_internal_http_permission(self):
+        import runpy
+        wizard = runpy.run_path(str(ROOT / 'editor/scripts/configure-pi'))
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.dict(os.environ, {'HOME': directory}, clear=True), patch('sys.stdin.isatty', return_value=True), \
+                 patch('builtins.input', side_effect=['http://10.0.0.2/v1', 'y', '', 'X-User', '', '']), \
+                 patch('getpass.getpass', side_effect=['private-user', 'private-token', '', '']), \
+                 contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(wizard['main'](), 0)
+            data = config.read_config({'HOME': directory})
+            self.assertEqual(data['INTERNAL_AI_ALLOW_HTTP'], '1')
+            self.assertEqual(data['INTERNAL_AI_BASE_URL'], 'http://10.0.0.2/v1')
+
     def test_wizard_saves_user_and_bearer_without_printing_them(self):
         spec = importlib.util.spec_from_loader('configure_pi', __import__('importlib').machinery.SourceFileLoader(
             'configure_pi', str(ROOT / 'editor/scripts/configure-pi')))
