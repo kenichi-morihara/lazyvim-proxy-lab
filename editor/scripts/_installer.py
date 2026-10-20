@@ -162,7 +162,9 @@ def main():
         return installer.install(args.copy)
     except (OSError, RuntimeError, subprocess.SubprocessError) as error:
         retry = "make " + args.command if args.command.startswith("setup-") or args.command in ("doctor-pi", "configure-pi") else "make"
-        print(f"ERROR: {error}\nFix the reported issue and rerun {retry}; completed stages and caches can be reused.", file=sys.stderr)
+        detail = (f"Stage failed (exit {error.returncode}); see the helper error immediately above."
+                  if isinstance(error, subprocess.CalledProcessError) else str(error))
+        print(f"ERROR: {detail}\nFix the reported issue and rerun {retry}; completed stages and caches can be reused.", file=sys.stderr)
         return 1
 
 

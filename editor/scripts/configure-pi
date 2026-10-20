@@ -12,11 +12,18 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'pi'))
 from local_config import read_config, save_config
 
 
+class SetupError(ValueError):
+    """An actionable message that contains no entered configuration values."""
+
+
 def main():
     if not sys.stdin.isatty():
-        raise ValueError('Run make configure-pi in an interactive terminal.')
+        raise SetupError('Run make configure-pi in an interactive terminal.')
     env = dict(os.environ)
-    saved = read_config(env)
+    try:
+        saved = read_config(env)
+    except ValueError as error:
+        raise SetupError(str(error)) from None
     print('Pi Responses setup. Secret inputs are hidden. Enter keeps saved values.')
     def ask(label, key, default='', secret=False):
         previous = saved.get(key, env.get(key, default))
@@ -29,23 +36,23 @@ def main():
     base = ask('API base URL (example: https://ai.example/v1)', 'INTERNAL_AI_BASE_URL').rstrip('/')
     url = urlsplit(base)
     if url.scheme not in ('https', 'http') or not url.hostname or url.username or url.password or url.query or url.fragment:
-        raise ValueError('Enter a base URL without credentials, query or fragment.')
+        raise SetupError('Enter a base URL without credentials, query or fragment.')
     if url.scheme == 'http' and url.hostname not in ('localhost', '127.0.0.1', '::1'):
-        raise ValueError('Use HTTPS; HTTP is allowed only for localhost tests.')
+        raise SetupError('Use HTTPS; HTTP is allowed only for localhost tests.')
     if url.path.endswith(('/responses', '/chat/completions')):
-        raise ValueError('Enter the base URL without /responses or /chat/completions.')
+        raise SetupError('Enter the base URL without /responses or /chat/completions.')
     model = ask('Model', 'INTERNAL_AI_MODEL', 'gpt-6.1-sol')
     header = ask('User header name', 'INTERNAL_AI_USER_HEADER', 'user')
     if not re.fullmatch(r'[A-Za-z0-9-]+', header) or header.lower() in (
         'authorization', 'host', 'content-type', 'content-length', 'connection', 'transfer-encoding'
     ):
-        raise ValueError('Enter a separate user header name.')
+        raise SetupError('Enter a separate user header name.')
     user = ask('User header value', 'INTERNAL_AI_USER', secret=True)
     token = ask('Bearer token (without Bearer prefix)', 'INTERNAL_AI_API_KEY', secret=True)
     if token.lower().startswith('bearer '):
         token = token[7:].strip()
     if not model or not user or not token or any(ord(c) < 32 or ord(c) == 127 for c in user + token):
-        raise ValueError('Model, user and Bearer token are required; control characters are forbidden.')
+        raise SetupError('Model, user and Bearer token are required; control characters are forbidden.')
     data = dict(INTERNAL_AI_TRANSPORT='openai', INTERNAL_AI_API='openai-responses',
                 INTERNAL_AI_BASE_URL=base, INTERNAL_AI_MODEL=model,
                 INTERNAL_AI_USER_HEADER=header, INTERNAL_AI_USER=user,
@@ -56,9 +63,12 @@ def main():
         value = ask(label, key, secret=key.endswith('PROXY') and key != 'NO_PROXY')
         if value and value != '-':
             if key == 'NODE_EXTRA_CA_CERTS' and not Path(value).expanduser().is_file():
-                raise ValueError('Additional CA file does not exist.')
+                raise SetupError('Additional CA file does not exist.')
             data[key] = str(Path(value).expanduser()) if key == 'NODE_EXTRA_CA_CERTS' else value
-    save_config(env, data)
+    try:
+        save_config(env, data)
+    except ValueError as error:
+        raise SetupError(str(error)) from None
     print('Saved private connection settings (directory 700, file 600). No network request sent.')
     prefix = Path(env.get('EDITOR_PREFIX') or Path.home() / '.local').expanduser()
     command = prefix / 'bin/pi'
@@ -73,6 +83,15 @@ def main():
 if __name__ == '__main__':
     try:
         raise SystemExit(main())
-    except (OSError, ValueError, EOFError, KeyboardInterrupt):
-        print('Pi setup not completed. Check the entered settings and rerun make configure-pi; secret values are not displayed.', file=sys.stderr)
+    except SetupError as error:
+        print('Pi setup: ' + str(error), file=sys.stderr)
+        raise SystemExit(1)
+    except OSError as error:
+        print(f'Pi setup: local file/command operation failed (errno={error.errno}). Check configuration directory permissions and the Pi installation.', file=sys.stderr)
+        raise SystemExit(1)
+    except ValueError:
+        print('Pi setup: invalid URL or setting format. Rerun make configure-pi.', file=sys.stderr)
+        raise SystemExit(1)
+    except (EOFError, KeyboardInterrupt):
+        print('Pi setup: input cancelled. Rerun make configure-pi in an interactive terminal.', file=sys.stderr)
         raise SystemExit(1)
