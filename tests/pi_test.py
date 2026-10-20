@@ -67,6 +67,7 @@ class PiTests(unittest.TestCase):
             origin = 'http://127.0.0.1:' + str(server.server_port)
             env = dict(os.environ, HOME=directory, XDG_STATE_HOME=str(root / 'state'),
                        INTERNAL_AI_BASE_URL=origin + '/v1', INTERNAL_AI_MODEL='dummy-model',
+                       INTERNAL_AI_TRANSPORT='openai', INTERNAL_AI_API='openai-completions',
                        INTERNAL_AI_API_KEY='dummy-private-key')
             for name in ('HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'http_proxy', 'https_proxy', 'all_proxy'):
                 env[name] = origin

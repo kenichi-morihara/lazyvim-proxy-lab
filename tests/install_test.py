@@ -33,7 +33,7 @@ class InstallTests(unittest.TestCase):
         for name in ('git', 'node', 'npm', 'cc', 'c++', 'make', 'rg', 'fd', 'tar', 'gzip', 'unzip', 'cmake', 'ninja', 'msgfmt'):
             output = 'git version 2.50.0' if name == 'git' else 'v22.0.0' if name == 'node' else ''
             self.tool(name, "printf '%s\\n' '" + output + "'\n")
-        for name in ('bash', 'dirname'):
+        for name in ('bash', 'dirname', 'printf'):
             (self.bin / name).symlink_to(shutil.which(name))
         # Each stub represents a stage, not the internals of package installation.
         # Real config placement is kept so a failed preflight cannot silently overwrite it.
@@ -108,6 +108,30 @@ prefix.mkdir(parents=True, exist_ok=True)
         self.assertEqual(self.run_make('doctor-pi').returncode, 0)
         self.assertEqual(self.run_make('doctor-pi', 'PROBE=1', standalone=True).returncode, 0)
         self.assertEqual(self.stages(), ['doctor:--doctor:0', 'doctor:--doctor:1'])
+
+    def test_help_has_no_installation_or_config_side_effects(self):
+        for standalone in (False, True):
+            result = self.run_make('help', standalone=standalone)
+            self.assertEqual(result.returncode, 0, result.stdout)
+            self.assertIn('make init-pi', result.stdout)
+            self.assertEqual('make pi-demo' in result.stdout, not standalone)
+        self.assertEqual(self.stages(), [])
+        self.assertEqual(list(self.home.iterdir()), [])
+
+    def test_init_pi_configures_after_install_even_with_parallel_make(self):
+        helper = self.editor / 'scripts/configure-pi'
+        helper.write_text("import os\nwith open(os.environ['TEST_LOG'], 'a') as log: log.write('configure-pi\\n')\n")
+        for standalone in (False, True):
+            with self.subTest(standalone=standalone):
+                self.log.unlink(missing_ok=True)
+                result = self.run_make('-j4', 'init-pi', standalone=standalone)
+                self.assertEqual(result.returncode, 0, result.stdout)
+                self.assertEqual(self.stages(), ['install-pi', 'configure-pi'])
+        self.log.unlink()
+        self.env['TEST_FAIL'] = 'install-pi'
+        result = self.run_make('-j4', 'init-pi')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.stages(), ['install-pi'])
 
     def test_setup_pi_is_independent_of_editor_preflight(self):
         for name in ('cc', 'c++', 'cmake', 'ninja', 'msgfmt'):

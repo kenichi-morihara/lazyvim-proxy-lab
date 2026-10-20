@@ -34,12 +34,18 @@ Gitの認証が必要な場合は、利用環境の認証方法を事前に設�
 |---|---|
 | `make` / `make install` | 事前確認 → 必要なら本体ビルド → 設定・言語ツール・プラグイン・parser導入 → 起動確認 |
 | `make doctor` | 導入前の依存確認だけ。インストールや通信は行わない |
+| `make help` | 用途別のコマンド一覧 |
+| `make init-pi` | Pi導入 → Responses接続の対話設定 → ローカル設定診断 |
+| `make configure-pi` | 保存済みのPi接続設定を更新 |
 | `make setup-tailscale` | 任意のTailscale起動・ログイン。接続を始めたいときにだけ実行 |
 | `make setup-pi` | 任意のPi導入。npmのみで固定版を取得し、社内AI用の起動コマンドを配置 |
 | `make doctor-pi` / `make doctor-pi PROBE=1` | Piのローカル設定確認 / 明示的な社内APIツール呼び出し診断 |
 | `make pi-lab` | ローカルの社内API再現サーバーを起動（既定はダミー応答） |
+| `make pi-demo` | 制限付きdev container内でダミーAPIを使ったPiテスト |
 
 `make`は事前確認も実行するので、先に`make doctor`を実行する必要はありません。確認だけしたい場合に使ってください。
+
+Piを初めて使う場合は`make init-pi`、設定変更は`make configure-pi`を使います。
 
 Piのproxy・CA・社内AI用環境変数とNeovimからの使い方は[社内AIとPi](editor/AI-SETUP.md)を参照してください。通常の`make`にはPiを含めません。
 

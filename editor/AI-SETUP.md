@@ -2,6 +2,33 @@
 
 Piは通常の`make`から分離しています。`openai`（従来のOpenAI互換）と`company-chat`（Cookie認証の社内API）の2方式を利用できます。画像から確認できたのはリクエストだけです。社内APIのSSE応答・native tools対応は未確認で、以下の再現サーバーと診断で段階的に確認します。
 
+## 職場で最初に実行するコマンド
+
+```bash
+make init-pi
+```
+
+Piの導入後、接続先ベースURL・モデル・独自userヘッダー名・user値・Bearerトークンを
+対話設定します。API形式はResponses、モデルの初期値は`gpt-6.1-sol`です。
+Bearerは`Bearer `を付けずに入力します（付けた場合も取り除きます）。
+必要ならproxy・NO_PROXY・追加CAファイルも設定できます。通常の`make`には影響しません。
+秘密値は非表示入力で、`~/.config/editor-pi/connection.json`に保存します。
+`XDG_CONFIG_HOME`設定時はその配下です。ディレクトリ0700、ファイル0600で、Gitリポジトリ内への保存は拒否します。
+既存設定の更新は`make configure-pi`。Enterで既存値を保持します。
+proxy等の任意設定は`-`で保存値を解除できます。環境変数による指定は保存値より優先されます。
+
+最後にローカル設定診断を行います。設定時にはAPIへ通信しません。
+接続先が変わったときは、既存の`INTERNAL_AI_*`環境変数が保存設定を上書きしないよう整理してください。
+設定後は新しいシェルでも`pi`が保存値を自動で読み込みます。
+
+```bash
+export PATH="${EDITOR_PREFIX:-$HOME/.local}/bin:$PATH"
+make doctor-pi PROBE=1  # 実APIでツール名・nonceを確認（ツールは実行しない）
+pi
+```
+
+Neovimでは`:terminal pi`で起動できます。
+
 ## 職場のCookie認証APIを使う
 
 ```bash
@@ -110,7 +137,7 @@ pi
 export INTERNAL_AI_AUTH_HEADER='api-key'
 ```
 
-この場合はキーをそのヘッダーへそのまま設定します。Responses互換APIを使う場合は`INTERNAL_AI_API=openai-responses`を指定できます（既定は`openai-completions`）。社内AIにはストリーム応答とツール呼び出しの互換性が必要です。URLにqueryが必要なAPI、独自の認証フロー、リクエストのラップ形式は別途対応が必要です。職場APIの接続確認はまだ行っていません。
+この場合はキーをそのヘッダーへそのまま設定します。API形式の既定はResponses（`openai-responses`）です。Chat Completionsを使う接続先だけ`INTERNAL_AI_API=openai-completions`を指定します。社内AIにはストリーム応答とツール呼び出しの互換性が必要です。URLにqueryが必要なAPI、独自の認証フロー、リクエストのラップ形式は別途対応が必要です。職場APIの接続確認はまだ行っていません。
 
 起動時のモデルカタログ更新・バージョン確認・統計送信・補助バイナリ取得を`PI_OFFLINE=1`、`PI_SKIP_VERSION_CHECK=1`、`PI_TELEMETRY=0`で停止します。**このoffline設定でも指定した社内AIへの推論リクエストは実行できます。** `rg` / `fd`はPATH上のものを使用します。自動発見する拡張は`--no-extensions`で無効にし、company-chatでは今回の専用providerだけを明示ロードします。
 
@@ -144,12 +171,12 @@ EDITOR_PI_TEST_PREFIX="$HOME/.local" node --test tests/company-provider.test.mjs
 python3 editor/scripts/ai-request-receiver
 ```
 
-表示された`http://127.0.0.1:8765/capture/<ランダム値>`へJSONをPOSTします。職場からアクセスするには、到達可能な接続経路が別途必要です。Cloudflare Tunnelを使う場合、通信はCloudflareを経由します。社内で許可された場合にダミーデータだけを使ってください。
+表示された`http://127.0.0.1:8765/capture/<ランダム値>`へ、同じマシンからダミーJSONをPOSTします。ローカルの形式確認専用として使い、外部公開はしません。
 
 送信例（URLは実行時の値に置き換え）:
 
 ```bash
-curl 'https://<受信ホスト>/capture/<ランダム値>' \
+curl 'http://127.0.0.1:8765/capture/<ランダム値>' \
   -H 'Content-Type: application/json' \
   --data '{"model":"dummy-model","messages":[{"role":"user","content":"hello"}],"stream":false}'
 ```
@@ -161,3 +188,46 @@ curl 'https://<受信ホスト>/capture/<ランダム値>' \
 - 受信データは既定で`~/.local/state/editor-ai-capture/`（XDG_STATE_HOMEに従う）へ保存し、ディレクトリ0700・ファイル0600にします。Git管理外に置いてください。
 - ランダムURLを知る相手が送信できます。URLを共有・コミットしないでください。GETでデータを取得する機能はありません。
 - 本体はlocalhostのみで待機し、1件256KiB・1起動20件まで受け付けます。`Ctrl+C`で停止します。再起動すると受信URLのランダム値が変わります。
+
+## Responses互換API＋独自userヘッダー
+
+標準のResponsesリクエスト・SSE応答を使う接続先には、次の設定を使用します。
+画像の5項目へ変換する`company-chat`とは別の接続方式です。
+
+```bash
+make setup-pi
+export INTERNAL_AI_TRANSPORT=openai
+# Responsesが既定。以前の設定が残っている場合は解除。
+unset INTERNAL_AI_API
+export INTERNAL_AI_BASE_URL='https://ai.example/v1'
+export INTERNAL_AI_MODEL='gpt-6.1-sol'
+# 実サービスのヘッダー名に変更。省略時は user。
+export INTERNAL_AI_USER_HEADER='user'
+read -rsp 'User header value: ' INTERNAL_AI_USER; echo
+export INTERNAL_AI_USER
+make doctor-pi
+make doctor-pi PROBE=1
+pi
+```
+
+`BASE_URL`には`/responses`を含めません。Piが`/responses`へPOSTします。
+同じベースURLを使う場合の切り替えは次のとおりです。接続先サービスが両方を提供するとは限りません。
+
+| 設定 | POST先（BASE_URLが`https://ai.example/v1`の場合） |
+| --- | --- |
+| 未指定、または`INTERNAL_AI_API=openai-responses` | `https://ai.example/v1/responses` |
+| `INTERNAL_AI_API=openai-completions` | `https://ai.example/v1/chat/completions` |
+
+自動切り替えやフォールバックは行いません。
+
+userヘッダーだけで認証する場合は`INTERNAL_AI_API_KEY`を設定する必要はありません。
+APIキーも必要なら`INTERNAL_AI_API_KEY`を追加し、既定のBearer認証と併用できます。
+独自キー用の`INTERNAL_AI_AUTH_HEADER`も引き続き使用できます。
+ヘッダー値は環境変数から読み込み、一時設定ファイルに実値を保存しません。
+SDKのデバッグログは無効にします。HTTPSと呼び出し元のproxy・CA設定を使います。
+HTTPはlocalhostのテストに限ります。
+
+`PROBE=1`は`diagnostic_echo`のツール名とランダムnonceを確認し、ツールを実行しません。
+通常の起動ではResponsesの`input`・`tools`を送信し、`function_call`と
+`function_call_output`をPiが処理します。画像の独自5項目やCookieへは変換しません。
+この方式は職場APIが標準Responses形式を公開している前提です。実職場APIでの動作は未確認です。

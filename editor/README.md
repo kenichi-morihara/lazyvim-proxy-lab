@@ -9,8 +9,10 @@
 ```bash
 make          # 事前確認から導入・起動確認まで
 make doctor   # インストールせず事前確認だけ
-make setup-pi # 任意: proxy環境向けPiを別途導入
-make doctor-pi # 任意: Pi設定をローカル確認（通信なし）
+make help         # 用途別コマンド一覧
+make init-pi      # 任意: Pi導入＋接続の対話設定
+make configure-pi # 任意: Piの接続設定だけ更新
+make doctor-pi    # 任意: Pi設定をローカル確認（通信なし）
 ```
 
 `make install`は`make`と同じです。Neovim 0.11.5（LuaJIT）がPATHにあれば再利用し、なければ固定版をユーザー領域へビルドします。Neovimや言語ツールが未導入であることは`doctor`の失敗理由にしません。必要なOS依存が不足していれば名前を表示して停止します。
