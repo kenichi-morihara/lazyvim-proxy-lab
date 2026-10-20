@@ -22,3 +22,18 @@ test('Reports the malformed later frame without exposing its payload', async () 
   assert.ok(!d.summary().includes('private-response-body'));
   assert.ok(!d.summary().includes('hello'));
 });
+
+
+test('Short report distinguishes an unfinished stream from completed JSON frames', async () => {
+  const d = createSseDiagnostics();
+  let source;
+  const stream = new ReadableStream({ start(c) { source = c; c.enqueue(new TextEncoder().encode('data: {"type":"response.output_item.done"}\n\ndata: {"private-body":')); } });
+  const reader = d.observe(new Response(stream, { headers: { 'content-type': 'text/event-stream' } })).body.getReader();
+  await reader.read();
+  const report = d.report();
+  assert.match(report.code, /^AI-SSE H200 E1 B0 P[1-9][0-9]* C0 D0 F0$/);
+  assert.ok(report.details.includes('Unfinished SSE data'));
+  assert.ok(!report.details.includes('private-body'));
+  source.close();
+  await reader.read();
+});

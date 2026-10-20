@@ -27,8 +27,8 @@ test('Responses failure and status command show actionable details without crede
       assert.ok(result.errorMessage.includes(text), text);
     }
     for (const secret of ['private-user', 'private-token']) assert.ok(!result.errorMessage.includes(secret));
-    let command, headersCommand, message;
-    provider.default({ registerProvider() {}, registerCommand(name, spec) { if (name === 'ai-status') command = spec; else if (name === 'ai-headers') headersCommand = spec; else assert.fail(name); },
+    let command, headersCommand, diagnosticCommand, message;
+    provider.default({ registerProvider() {}, registerCommand(name, spec) { if (name === 'ai-status') command = spec; else if (name === 'ai-headers') headersCommand = spec; else if (name === 'ai-diagnostic') diagnosticCommand = spec; else assert.fail(name); },
       sendMessage(value, options) { assert.equal(options.triggerTurn, false); message = value; } });
     await command.handler();
     assert.equal(message.display, true);
@@ -54,6 +54,10 @@ test('Responses failure and status command show actionable details without crede
     assert.match(malformed.errorMessage, /malformed server-sent event JSON/);
     assert.match(malformed.errorMessage, /first_invalid=#4 event=response.completed data=other/);
     assert.ok(!malformed.errorMessage.includes('private-response-body'));
+    assert.match(malformed.errorMessage, /^AI-SSE H200 E4 B4/);
+    await diagnosticCommand.handler();
+    assert.match(message.content, /^AI-SSE H200 E4 B4/);
+    for (const hidden of ['private-response-body', 'private-user', 'private-token', 'hello', 'https://ai.example']) assert.ok(!message.content.includes(hidden));
 
     for (const secret of ['private-user', 'private-token']) assert.ok(!message.content.includes(secret));
   } finally {

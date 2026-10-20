@@ -21,6 +21,13 @@ export function responsesModel(env = process.env) {
 }
 
 let lastError = '';
+let lastDiagnostic = 'No request failure recorded in this Pi process.';
+
+function diagnosticError(model, detail, diagnostic) {
+  const report = diagnostic.report();
+  lastDiagnostic = report.code + '\n' + report.details;
+  return report.code + '\n' + requestError(model, detail) + '\n' + diagnostic.summary() + '\n' + report.details;
+}
 
 export function redactError(value, env = process.env) {
   let text = String(value || 'No error detail returned');
@@ -65,13 +72,13 @@ export function responsesStream(model, context, options = {}) {
     try {
       for await (const event of inner) {
         if (event.type === 'error') {
-          lastError = requestError(model, event.error.errorMessage) + '\n' + diagnostic.summary();
+          lastError = diagnosticError(model, event.error.errorMessage, diagnostic);
           event.error.errorMessage = lastError;
         }
         output.push(event);
       }
     } catch (error) {
-      lastError = requestError(model, error?.message) + '\n' + diagnostic.summary();
+      lastError = diagnosticError(model, error?.message, diagnostic);
       output.push({ type: 'error', reason: options.signal?.aborted ? 'aborted' : 'error', error: {
         role: 'assistant', content: [], api: model.api, provider: model.provider, model: model.id,
         stopReason: options.signal?.aborted ? 'aborted' : 'error', errorMessage: lastError, timestamp: Date.now(),
@@ -85,6 +92,12 @@ export function responsesStream(model, context, options = {}) {
 
 export default function (pi) {
   const env = process.env;
+  pi.registerCommand('ai-diagnostic', {
+    description: 'Show a short failure code and stream metadata only; no response text or credentials',
+    async handler() {
+      pi.sendMessage({ customType: 'ai-diagnostic', content: lastDiagnostic, display: true }, { triggerTurn: false });
+    },
+  });
   pi.registerCommand('ai-headers', {
     description: 'Reveal actual request authentication headers on screen only (not saved in chat)',
     async handler(_args, ctx) {

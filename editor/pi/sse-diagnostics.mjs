@@ -8,6 +8,8 @@ const eventLabel = value => knownEvents.has(value) ? value : value ? 'other' : '
 
 export function createSseDiagnostics() {
   let http = 'unknown', media = 'unknown', count = 0, invalid = '', last = '', line = '', data = [], name = '', size = 0, capped = false;
+  let badIndex = 0, completed = false, sentinel = false, eof = false, bytes = 0, chunks = 0, jsonFrames = 0, replacements = 0;
+  const history = [];
   const decoder = new TextDecoder();
   function frame() {
     if (!data.length && !capped) { name = ''; return; }
@@ -26,7 +28,12 @@ export function createSseDiagnostics() {
         } else kind = 'json-scalar';
       } catch { /* Keep only a shape label, never the payload or parser message. */ }
     }
+    if (valid) jsonFrames++;
+    if (kind === 'response.completed') completed = true;
+    if (kind === 'done-sentinel') sentinel = true;
     last = `#${count} event=${eventLabel(name)} data=${kind}`;
+    history.push(last); if (history.length > 6) history.shift();
+    if (!valid && !badIndex) badIndex = count;
     if (!valid && !invalid) invalid = last;
     data = []; name = ''; size = 0; capped = false;
   }
@@ -41,6 +48,7 @@ export function createSseDiagnostics() {
     }
   }
   function feed(text, final = false) {
+    replacements += (text.match(/\ufffd/g) || []).length;
     line += text;
     let match;
     while ((match = /\r\n|\n|\r(?!$)/.exec(line))) {
@@ -57,10 +65,19 @@ export function createSseDiagnostics() {
       media = /^[a-z0-9.+-]+\/[a-z0-9.+-]+$/i.test(value) ? value : 'other';
       if (!response.ok || !response.body) return response;
       return new Response(response.body.pipeThrough(new TransformStream({
-        transform(chunk, controller) { feed(decoder.decode(chunk, { stream: true })); controller.enqueue(chunk); },
-        flush() { feed(decoder.decode(), true); },
+        transform(chunk, controller) { bytes += chunk.byteLength; chunks++; feed(decoder.decode(chunk, { stream: true })); controller.enqueue(chunk); },
+        flush() { eof = true; feed(decoder.decode(), true); },
       })), { status: response.status, statusText: response.statusText, headers: response.headers });
     },
     summary() { return `SSE diagnostic: HTTP=${http}; media=${media}; events=${count}; ${invalid ? 'first_invalid=' + invalid : 'last=' + (last || 'none')}`; },
+    report() {
+      const pending = size + line.length;
+      const code = `AI-SSE H${http} E${count} B${badIndex} P${pending} C${+completed} D${+sentinel} F${+eof}`;
+      const hint = badIndex ? `Non-JSON event observed at #${badIndex}; the server SSE format needs inspection.`
+        : pending ? 'Unfinished SSE data remained when the client failed.'
+        : !completed ? 'No response.completed event observed. All completed frames seen so far were JSON; the failing bytes may not have reached this observer.'
+        : 'response.completed was observed. Inspect the client error and later events.';
+      return { code, details: `${hint}\nHTTP=${http}; media=${media}; bytes=${bytes}; chunks=${chunks}; JSON-frames=${jsonFrames}; UTF8-replacements=${replacements}; pending-data-lines=${data.length}; pending-line-chars=${line.length}\nRecent frame shapes (no payload):\n${history.join('\n') || 'none'}` };
+    },
   };
 }
