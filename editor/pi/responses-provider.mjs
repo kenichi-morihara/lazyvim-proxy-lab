@@ -1,4 +1,5 @@
 // Preserve the standard Responses protocol; only configure gateway authentication.
+import { createSseDiagnostics } from './sse-diagnostics.mjs';
 import { createAssistantMessageEventStream } from '@earendil-works/pi-ai';
 import { streamSimple } from '@earendil-works/pi-ai/api/openai-responses';
 
@@ -50,8 +51,11 @@ export function responsesStream(model, context, options = {}) {
     headers[header] = header.toLowerCase() === 'authorization'
       ? `Bearer ${env.INTERNAL_AI_API_KEY}` : env.INTERNAL_AI_API_KEY;
   }
+  const diagnostic = createSseDiagnostics();
+  const requestFetch = options.fetch || globalThis.fetch;
   const inner = streamSimple(model, context, {
     ...options, apiKey: env.INTERNAL_AI_API_KEY || 'unused',
+    fetch: async (...args) => diagnostic.observe(await requestFetch(...args)),
     headers: { ...options.headers, ...headers,
       ...(!env.INTERNAL_AI_API_KEY || header.toLowerCase() !== 'authorization'
         ? { Authorization: null } : {}) },
@@ -61,13 +65,13 @@ export function responsesStream(model, context, options = {}) {
     try {
       for await (const event of inner) {
         if (event.type === 'error') {
-          lastError = requestError(model, event.error.errorMessage);
+          lastError = requestError(model, event.error.errorMessage) + '\n' + diagnostic.summary();
           event.error.errorMessage = lastError;
         }
         output.push(event);
       }
     } catch (error) {
-      lastError = requestError(model, error?.message);
+      lastError = requestError(model, error?.message) + '\n' + diagnostic.summary();
       output.push({ type: 'error', reason: options.signal?.aborted ? 'aborted' : 'error', error: {
         role: 'assistant', content: [], api: model.api, provider: model.provider, model: model.id,
         stopReason: options.signal?.aborted ? 'aborted' : 'error', errorMessage: lastError, timestamp: Date.now(),

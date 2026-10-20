@@ -39,6 +39,22 @@ test('Responses failure and status command show actionable details without crede
     await headersCommand.handler('', { ui: { notify(value) { revealed = value; } } });
     assert.equal(revealed, 'X-User: private-user\nAuthorization: Bearer private-token');
     assert.equal(message, previousMessage, 'Revealed headers must not be saved to chat');
+    const events = [
+      { type: 'response.created', response: { id: 'resp_test' } },
+      { type: 'response.output_item.added', output_index: 0, item: { type: 'message', id: 'msg_test', role: 'assistant', content: [] } },
+      { type: 'response.output_text.delta', output_index: 0, content_index: 0, delta: 'hello' },
+    ];
+    const body = events.map(e => 'event: ' + e.type + '\ndata: ' + JSON.stringify(e) + '\n\n').join('') +
+      'event: response.completed\ndata: private-response-body\n\n';
+    const malformed = await provider.responsesStream(provider.responsesModel(), context, {
+      fetch: async () => new Response(body, { headers: { 'content-type': 'text/event-stream' } }),
+    }).result();
+    assert.equal(malformed.stopReason, 'error');
+    assert.ok(malformed.content.some(block => block.type === 'text' && block.text === 'hello'));
+    assert.match(malformed.errorMessage, /malformed server-sent event JSON/);
+    assert.match(malformed.errorMessage, /first_invalid=#4 event=response.completed data=other/);
+    assert.ok(!malformed.errorMessage.includes('private-response-body'));
+
     for (const secret of ['private-user', 'private-token']) assert.ok(!message.content.includes(secret));
   } finally {
     for (const key of Object.keys(process.env)) if (!(key in old)) delete process.env[key];
