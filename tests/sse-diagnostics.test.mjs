@@ -31,9 +31,20 @@ test('Short report distinguishes an unfinished stream from completed JSON frames
   const reader = d.observe(new Response(stream, { headers: { 'content-type': 'text/event-stream' } })).body.getReader();
   await reader.read();
   const report = d.report();
-  assert.match(report.code, /^AI-SSE H200 E1 B0 P[1-9][0-9]* C0 D0 F0$/);
+  assert.match(report.code, /^AI-SSE H200 E1 B0 P[1-9][0-9]* C0 D0 F0 Q0 I0$/);
   assert.ok(report.details.includes('Unfinished SSE data'));
   assert.ok(!report.details.includes('private-body'));
   source.close();
   await reader.read();
+});
+
+
+test('Tracks request sizes and interrupted JSON without retaining request/response content', () => {
+  const d = createSseDiagnostics();
+  const body = JSON.stringify({ stream: false, input: [{ role: 'user', content: 'private-message' }], tools: [{ name: 'read' }] });
+  d.request({ body });
+  d.jsonMeta({ status: 200, media: 'application/json', bytes: 123, interrupted: true });
+  const report = d.report();
+  assert.equal(report.code, `AI-JSON H200 Q${new TextEncoder().encode(body).byteLength} I1 R123 Junknown X1`);
+  assert.ok(!report.details.includes('private-message'));
 });

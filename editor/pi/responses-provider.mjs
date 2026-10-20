@@ -63,12 +63,16 @@ export function responsesStream(model, context, options = {}) {
   const diagnostic = createSseDiagnostics();
   const requestFetch = options.fetch || globalThis.fetch;
   let transportFailure = '';
+  const measuredFetch = async (input, init) => {
+    diagnostic.request(init);
+    return requestFetch(input, init);
+  };
   const inner = streamSimple(model, context, {
     ...options, apiKey: env.INTERNAL_AI_API_KEY || 'unused',
     fetch: async (input, init) => {
       try {
         return diagnostic.observe(await (responsesStreaming(env)
-          ? requestFetch(input, init) : nonStreamingResponse(requestFetch, input, init)));
+          ? measuredFetch(input, init) : nonStreamingResponse(measuredFetch, input, init, diagnostic.jsonMeta)));
       } catch (error) {
         if (error?.message?.startsWith('AI_NONSTREAM_')) transportFailure = error.message;
         throw error;

@@ -6,7 +6,7 @@ export function responsesStreaming(env = process.env) {
   return value === 'true' || value === '1';
 }
 
-async function readJson(response) {
+async function readJson(response, onProgress) {
   if (!(response.headers.get('content-type') || '').toLowerCase().includes('application/json')) {
     throw new Error('AI_NONSTREAM_EXPECTED_JSON: server did not return application/json');
   }
@@ -20,23 +20,30 @@ async function readJson(response) {
       if (done) break;
       size += value.byteLength;
       if (size > 8 * 1024 * 1024) throw new Error('AI_NONSTREAM_RESPONSE_TOO_LARGE');
+      onProgress({ bytes: size });
       text += decoder.decode(value, { stream: true });
     }
     text += decoder.decode();
+    onProgress({ bytes: size, done: true });
+  } catch (error) {
+    if (error?.message?.startsWith('AI_NONSTREAM_')) throw error;
+    onProgress({ bytes: size, interrupted: true });
+    throw new Error('AI_NONSTREAM_BODY_INTERRUPTED: response body ended during reading');
   } finally { reader.cancel().catch(() => {}); reader.releaseLock(); }
-  try { return JSON.parse(text); }
-  catch { throw new Error('AI_NONSTREAM_INVALID_JSON'); }
+  try { const value = JSON.parse(text); onProgress({ valid: true }); return value; }
+  catch { onProgress({ valid: false }); throw new Error('AI_NONSTREAM_INVALID_JSON: received body is not complete valid JSON'); }
 }
 
-export async function nonStreamingResponse(fetcher, input, init) {
+export async function nonStreamingResponse(fetcher, input, init, onProgress = () => {}) {
   if (typeof init?.body !== 'string') throw new Error('AI_NONSTREAM_UNSUPPORTED_REQUEST');
   const body = JSON.parse(init.body);
   body.stream = false;
   const headers = new Headers(init.headers);
   headers.set('Accept', 'application/json');
   const response = await fetcher(input, { ...init, headers, body: JSON.stringify(body) });
+  onProgress({ status: response.status, media: (response.headers.get('content-type') || '').split(';')[0].trim() });
   if (!response.ok) return response; // Preserve normal HTTP errors for the SDK.
-  const value = await readJson(response);
+  const value = await readJson(response, onProgress);
   if (!value || value.object !== 'response' || !['completed', 'incomplete', 'failed'].includes(value.status) || !Array.isArray(value.output)) {
     throw new Error('AI_NONSTREAM_UNSUPPORTED_RESPONSE');
   }

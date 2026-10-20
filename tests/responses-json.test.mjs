@@ -33,3 +33,12 @@ test('Incomplete response stays incomplete; malformed JSON and ignored stream fl
   const invalid = { ...full, output: [{ type: 'function_call', name: 'edit', id: 'fc_1', call_id: 'call_1', arguments: 'not-json' }] };
   await assert.rejects(nonStreamingResponse(async () => Response.json(invalid), '', init), /AI_NONSTREAM_INVALID_TOOL_ARGUMENTS/);
 });
+
+
+test('Reports a response-body interruption distinctly from a JSON syntax error', async () => {
+  const updates = [];
+  const stream = new ReadableStream({ start(c) { c.enqueue(new TextEncoder().encode('{"output":')); }, pull(c) { c.error(new Error('socket closed')); } });
+  await assert.rejects(nonStreamingResponse(async () => new Response(stream, { headers: { 'content-type': 'application/json' } }), '', init,
+    value => updates.push(value)), /AI_NONSTREAM_BODY_INTERRUPTED/);
+  assert.ok(updates.some(value => value.interrupted));
+});
