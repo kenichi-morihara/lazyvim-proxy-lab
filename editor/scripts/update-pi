@@ -1,0 +1,16 @@
+#!/usr/bin/env python3
+"""Update managed launch code without reinstalling Pi or re-entering credentials."""
+import os
+from pathlib import Path
+import runpy
+import sys
+
+try:
+    helpers = runpy.run_path(str(Path(__file__).resolve().with_name('configure-pi')))
+    prefix = Path(os.environ.get('EDITOR_PREFIX') or Path.home() / '.local').expanduser()
+    if not helpers['refresh_runtime'](prefix):
+        raise ValueError('Pi is not installed. Run make init-pi first.')
+    print('PASS Pi launcher/helpers updated. Saved connection settings unchanged; no prompts or network requests. Restart pi.')
+except (OSError, ValueError):
+    print('Pi update failed. Check EDITOR_PREFIX and the managed installation; run make setup-pi if it is incomplete.', file=sys.stderr)
+    raise SystemExit(1)

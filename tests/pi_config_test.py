@@ -91,6 +91,19 @@ class ConfigTests(unittest.TestCase):
             self.assertTrue(wizard['refresh_runtime'](prefix))
             self.assertIn('load_config', command.read_text())
             self.assertTrue((prefix / 'share/editor-pi/company/local_config.py').is_file())
+            import subprocess
+            import sys
+            private = prefix / 'config/editor-pi/connection.json'
+            private.parent.mkdir(parents=True)
+            private.write_text('{"INTERNAL_AI_API_KEY":"test-secret"}')
+            before = private.read_bytes()
+            result = subprocess.run([sys.executable, str(ROOT / 'editor/scripts/update-pi')],
+                                    env=dict(os.environ, EDITOR_PREFIX=str(prefix), XDG_CONFIG_HOME=str(prefix / 'config')),
+                                    stdin=subprocess.DEVNULL, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(private.read_bytes(), before)
+            self.assertNotIn('test-secret', result.stdout + result.stderr)
+
 
     def test_wizard_saves_explicit_internal_http_permission(self):
         import runpy

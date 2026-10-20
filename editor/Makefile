@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := install
 
-OPTIONAL_TARGETS := setup-pi configure-pi doctor-pi setup-tailscale
+OPTIONAL_TARGETS := setup-pi update-pi configure-pi doctor-pi setup-tailscale
 .PHONY: help install doctor init-pi config $(OPTIONAL_TARGETS)
 
 help:
@@ -9,6 +9,7 @@ help:
 	  '  make doctor                  Check editor prerequisites without installing' \
 	  '' 'Pi (optional, Responses by default):' \
 	  '  make init-pi                 Install Pi, then interactively save connection settings' \
+	  '  make update-pi               Update launcher/helpers without prompts or downloads' \
 	  '  make config                  Update saved connection settings' \
 	  '  make doctor-pi               Check Pi configuration without network requests' \
 	  '  make doctor-pi PROBE=1       Probe the API tool protocol without executing tools' \

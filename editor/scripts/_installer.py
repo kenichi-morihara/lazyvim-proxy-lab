@@ -142,6 +142,7 @@ def main():
     subparsers.add_parser("setup-pi")
     subparsers.add_parser("doctor-pi")
     subparsers.add_parser("configure-pi")
+    subparsers.add_parser("update-pi")
     install = subparsers.add_parser("install")
     install.add_argument("--copy", action="store_true")
     args = parser.parse_args()
@@ -153,6 +154,9 @@ def main():
             return installer.setup_tailscale()
         if args.command == "setup-pi":
             return installer.setup_pi()
+        if args.command == "update-pi":
+            installer.run_helper("scripts/update-pi")
+            return 0
         if args.command == "configure-pi":
             installer.run_helper("scripts/configure-pi")
             return 0
@@ -161,7 +165,7 @@ def main():
             return 0
         return installer.install(args.copy)
     except (OSError, RuntimeError, subprocess.SubprocessError) as error:
-        retry = "make " + args.command if args.command.startswith("setup-") or args.command in ("doctor-pi", "configure-pi") else "make"
+        retry = "make " + args.command if args.command.startswith("setup-") or args.command in ("doctor-pi", "configure-pi", "update-pi") else "make"
         detail = (f"Stage failed (exit {error.returncode}); see the helper error immediately above."
                   if isinstance(error, subprocess.CalledProcessError) else str(error))
         print(f"ERROR: {detail}\nFix the reported issue and rerun {retry}; completed stages and caches can be reused.", file=sys.stderr)
