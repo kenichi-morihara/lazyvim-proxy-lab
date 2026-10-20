@@ -51,7 +51,9 @@ class ResponsesPiTests(unittest.TestCase):
                 ]
                 payload = ''.join('event: ' + e['type'] + '\ndata: ' + json.dumps(e) + '\n\n' for e in events).encode()
                 self.send_response(200)
-                self.send_header('Content-Type', 'text/event-stream')
+                if not body['stream']:
+                    payload = json.dumps(response).encode()
+                self.send_header('Content-Type', 'text/event-stream' if body['stream'] else 'application/json')
                 self.send_header('Content-Length', str(len(payload)))
                 self.end_headers()
                 self.wfile.write(payload)
@@ -67,8 +69,9 @@ class ResponsesPiTests(unittest.TestCase):
                        INTERNAL_AI_BASE_URL=f'http://127.0.0.1:{server.server_port}/v1',
                        INTERNAL_AI_MODEL='test-responses', INTERNAL_AI_USER_HEADER='X-Company-User',
                        INTERNAL_AI_USER='private-test-user', NO_PROXY='127.0.0.1,localhost', no_proxy='127.0.0.1,localhost')
-            for api_key, api in (('', None), ('private-test-key', None), ('private-test-key', 'openai-responses')):
-                with self.subTest(api_key_present=bool(api_key), api=api):
+            for api_key, api, streaming in (('', None, True), ('private-test-key', None, True), ('private-test-key', 'openai-responses', True), ('private-test-key', None, False)):
+                with self.subTest(api_key_present=bool(api_key), api=api, streaming=streaming):
+                    env['INTERNAL_AI_STREAM'] = str(streaming).lower()
                     if api:
                         env['INTERNAL_AI_API'] = api
                     else:
@@ -96,7 +99,7 @@ class ResponsesPiTests(unittest.TestCase):
                         self.assertEqual(headers['x-company-user'], 'private-test-user')
                         self.assertEqual(headers.get('authorization', ''), 'Bearer ' + api_key if api_key else '')
                         self.assertEqual(body['model'], 'test-responses')
-                        self.assertTrue(body['stream'])
+                        self.assertEqual(body['stream'], streaming)
                         self.assertIn('input', body)
                         self.assertNotIn('messages', body)
                     self.assertTrue(any(i.get('type') == 'function_call_output' and 'before' in str(i.get('output'))

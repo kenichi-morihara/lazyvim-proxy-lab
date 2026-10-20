@@ -1,9 +1,11 @@
 // Preserve the standard Responses protocol; only configure gateway authentication.
+import { responsesStreaming, nonStreamingResponse } from './responses-json.mjs';
 import { createSseDiagnostics } from './sse-diagnostics.mjs';
 import { createAssistantMessageEventStream } from '@earendil-works/pi-ai';
 import { streamSimple } from '@earendil-works/pi-ai/api/openai-responses';
 
 export function responsesModel(env = process.env) {
+  responsesStreaming(env);
   const url = new URL(env.INTERNAL_AI_BASE_URL);
   if ((url.protocol !== 'https:' && !(url.protocol === 'http:' && (['localhost', '127.0.0.1', '[::1]'].includes(url.hostname) || env.INTERNAL_AI_ALLOW_HTTP === '1'))) ||
       url.username || url.password || url.search || url.hash) throw new Error('Invalid Responses base URL');
@@ -40,7 +42,7 @@ export function redactError(value, env = process.env) {
 }
 
 export function connectionStatus(model = responsesModel(), env = process.env) {
-  return `API: Responses\nModel ID: ${model.id}\nPOST: ${model.baseUrl.replace(/\/$/, '')}/responses\nUser header: ${env.INTERNAL_AI_USER_HEADER || 'user'} (value hidden)\nBearer: ${env.INTERNAL_AI_API_KEY ? 'set' : 'not set'}`;
+  return `API: Responses\nWire stream: ${responsesStreaming(env)}\nModel ID: ${model.id}\nPOST: ${model.baseUrl.replace(/\/$/, '')}/responses\nUser header: ${env.INTERNAL_AI_USER_HEADER || 'user'} (value hidden)\nBearer: ${env.INTERNAL_AI_API_KEY ? 'set' : 'not set'}`;
 }
 
 function requestError(model, detail) {
@@ -60,9 +62,19 @@ export function responsesStream(model, context, options = {}) {
   }
   const diagnostic = createSseDiagnostics();
   const requestFetch = options.fetch || globalThis.fetch;
+  let transportFailure = '';
   const inner = streamSimple(model, context, {
     ...options, apiKey: env.INTERNAL_AI_API_KEY || 'unused',
-    fetch: async (...args) => diagnostic.observe(await requestFetch(...args)),
+    fetch: async (input, init) => {
+      try {
+        return diagnostic.observe(await (responsesStreaming(env)
+          ? requestFetch(input, init) : nonStreamingResponse(requestFetch, input, init)));
+      } catch (error) {
+        if (error?.message?.startsWith('AI_NONSTREAM_')) transportFailure = error.message;
+        throw error;
+      }
+    },
+    ...(!responsesStreaming(env) ? { maxRetries: 0 } : {}),
     headers: { ...options.headers, ...headers,
       ...(!env.INTERNAL_AI_API_KEY || header.toLowerCase() !== 'authorization'
         ? { Authorization: null } : {}) },
@@ -72,7 +84,7 @@ export function responsesStream(model, context, options = {}) {
     try {
       for await (const event of inner) {
         if (event.type === 'error') {
-          lastError = diagnosticError(model, event.error.errorMessage, diagnostic);
+          lastError = diagnosticError(model, transportFailure || event.error.errorMessage, diagnostic);
           event.error.errorMessage = lastError;
         }
         output.push(event);

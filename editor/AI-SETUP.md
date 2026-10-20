@@ -279,3 +279,16 @@ pi
 H=HTTP状態、E=観測イベント数、B=最初の不正JSONイベント番号（0は未検出）、
 P=未処理データの文字数、C=response.completed有無、D=[DONE]有無、F=通信EOF観測有無です。
 この短い行だけを共有できます。外部受信サービスへの送信や通信制限の回避は行いません。
+
+## 一時的にstream=falseを試す
+
+```bash
+git pull
+make update-pi
+INTERNAL_AI_STREAM=false pi
+```
+
+この起動だけ、サーバーへのResponsesリクエストを`stream:false`・`Accept: application/json`にします。
+完了JSONを受け取り、Pi内部のイベントへ変換します。途中の文字表示はなく、完了後に表示します。
+テキスト・ツール要求・ツール結果の再送に対応します。通常の`pi`起動はstream=trueのままです。
+`/ai-status`の`Wire stream`で確認できます。JSON応答でない場合はエラーにし、自動でSSEへ戻しません。

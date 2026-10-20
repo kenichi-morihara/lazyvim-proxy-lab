@@ -90,6 +90,7 @@ def main():
         raise SetupError('Model, user and Bearer token are required; control characters are forbidden.')
     data = dict(INTERNAL_AI_TRANSPORT='openai', INTERNAL_AI_API='openai-responses',
                 INTERNAL_AI_BASE_URL=base, INTERNAL_AI_MODEL=model,
+                INTERNAL_AI_STREAM=saved.get('INTERNAL_AI_STREAM', env.get('INTERNAL_AI_STREAM', 'true')),
                 INTERNAL_AI_USER_HEADER=header, INTERNAL_AI_USER=user,
                 INTERNAL_AI_API_KEY=token, INTERNAL_AI_AUTH_HEADER='Authorization')
     if allow_http:
