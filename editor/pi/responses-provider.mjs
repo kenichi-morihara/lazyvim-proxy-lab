@@ -1,4 +1,5 @@
 // Preserve the standard Responses protocol; only configure gateway authentication.
+import { withoutInputStatus } from './responses-request.mjs';
 import { responsesStreaming, nonStreamingResponse } from './responses-json.mjs';
 import { createSseDiagnostics } from './sse-diagnostics.mjs';
 import { createAssistantMessageEventStream } from '@earendil-works/pi-ai';
@@ -64,6 +65,7 @@ export function responsesStream(model, context, options = {}) {
   const requestFetch = options.fetch || globalThis.fetch;
   let transportFailure = '';
   const measuredFetch = async (input, init) => {
+    init = withoutInputStatus(init);
     diagnostic.request(init);
     return requestFetch(input, init);
   };

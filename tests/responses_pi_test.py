@@ -102,6 +102,7 @@ class ResponsesPiTests(unittest.TestCase):
                         self.assertEqual(body['stream'], streaming)
                         self.assertIn('input', body)
                         self.assertNotIn('messages', body)
+                        self.assertTrue(all('status' not in item for item in body['input'] if isinstance(item, dict)))
                     self.assertTrue(any(i.get('type') == 'function_call_output' and 'before' in str(i.get('output'))
                                         for i in requests[1][2]['input']))
                     self.assertEqual(list((root / 'state/editor-pi').glob('runtime-*')), [])
