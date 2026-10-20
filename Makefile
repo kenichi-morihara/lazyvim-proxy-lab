@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := install
 
 # Editor commands are also available when editor/ is copied on its own.
-EDITOR_TARGETS := install doctor init-pi setup-pi configure-pi doctor-pi setup-tailscale
+EDITOR_TARGETS := install doctor init-pi setup-pi configure-pi config doctor-pi setup-tailscale
 LAB_TARGETS := pi-lab pi-demo
 .PHONY: help $(EDITOR_TARGETS) $(LAB_TARGETS)
 

@@ -49,7 +49,33 @@ class ConfigTests(unittest.TestCase):
             self.assertEqual(target.read_text(), 'unchanged')
             (root / '.git').mkdir()
             with self.assertRaises(ValueError):
-                config.save_config({'XDG_CONFIG_HOME': str(root / 'another')}, {})
+                config.save_config({'HOME': str(root), 'XDG_CONFIG_HOME': str(root / 'another')}, {})
+
+    def test_config_home_in_dotfiles_uses_private_state_directory(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            checkout = root / 'dotfiles'
+            (checkout / '.git').mkdir(parents=True)
+            env = {'HOME': str(root / 'home'), 'XDG_CONFIG_HOME': str(checkout / '.config')}
+            path = config.save_config(env, {'INTERNAL_AI_MODEL': 'saved-model'})
+            self.assertEqual(path, root / 'home/.local/state/editor-pi/connection.json')
+            self.assertEqual(config.load_config(dict(env))['INTERNAL_AI_MODEL'], 'saved-model')
+            self.assertFalse((checkout / '.config/editor-pi').exists())
+
+    def test_refresh_updates_old_managed_launcher_without_reinstall(self):
+        import runpy
+        wizard = runpy.run_path(str(ROOT / 'editor/scripts/configure-pi'))
+        with tempfile.TemporaryDirectory() as directory:
+            prefix = Path(directory)
+            command = prefix / 'bin/pi'
+            command.parent.mkdir()
+            command.write_text('#!/usr/bin/python3\n# proxy-lab managed internal Pi launcher\n# old version\n')
+            cli = prefix / 'share/editor-pi/node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js'
+            cli.parent.mkdir(parents=True)
+            cli.write_text('// fixture')
+            self.assertTrue(wizard['refresh_runtime'](prefix))
+            self.assertIn('load_config', command.read_text())
+            self.assertTrue((prefix / 'share/editor-pi/company/local_config.py').is_file())
 
     def test_wizard_saves_explicit_internal_http_permission(self):
         import runpy
@@ -63,6 +89,16 @@ class ConfigTests(unittest.TestCase):
             data = config.read_config({'HOME': directory})
             self.assertEqual(data['INTERNAL_AI_ALLOW_HTTP'], '1')
             self.assertEqual(data['INTERNAL_AI_BASE_URL'], 'http://10.0.0.2/v1')
+            with patch.dict(os.environ, {'HOME': directory}, clear=True), patch('sys.stdin.isatty', return_value=True), \
+                 patch('builtins.input', side_effect=['', '', '', '', '', '']) as prompts, \
+                 patch('getpass.getpass', side_effect=['new-user', 'new-token', '', '']), \
+                 contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(wizard['main'](), 0)
+            data = config.read_config({'HOME': directory})
+            self.assertEqual(data['INTERNAL_AI_ALLOW_HTTP'], '1')
+            self.assertEqual(data['INTERNAL_AI_USER'], 'new-user')
+            self.assertIn('[Y/n]', prompts.call_args_list[1].args[0])
+
 
     def test_wizard_saves_user_and_bearer_without_printing_them(self):
         spec = importlib.util.spec_from_loader('configure_pi', __import__('importlib').machinery.SourceFileLoader(

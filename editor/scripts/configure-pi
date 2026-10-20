@@ -4,6 +4,8 @@ import getpass
 import os
 from pathlib import Path
 import re
+import shutil
+import tempfile
 import subprocess
 import sys
 from urllib.parse import urlsplit
@@ -16,6 +18,31 @@ class SetupError(ValueError):
     """An actionable message that contains no entered configuration values."""
 
 
+def refresh_runtime(prefix):
+    """Refresh managed scripts after git pull, without downloading Pi again."""
+    command = prefix / 'bin/pi'
+    if not command.exists():
+        return False
+    if command.is_symlink() or b'# proxy-lab managed internal Pi launcher' not in command.read_bytes()[:200]:
+        raise SetupError('Existing pi is not the managed launcher; choose EDITOR_PREFIX or run make setup-pi.')
+    runtime = prefix / 'share/editor-pi'
+    if not (runtime / 'node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js').is_file():
+        raise SetupError('Pi runtime is missing. Run make setup-pi before make config.')
+    editor = Path(__file__).resolve().parents[1]
+    shutil.copytree(editor / 'pi', runtime / 'company', dirs_exist_ok=True,
+                    ignore=shutil.ignore_patterns('__pycache__', 'node_modules'))
+    source = (editor / 'scripts/pi-internal').read_text().split('\n', 1)[1]
+    fd, name = tempfile.mkstemp(prefix='.pi-config-', dir=command.parent)
+    try:
+        with os.fdopen(fd, 'w') as stream:
+            stream.write('#!' + sys.executable + '\n' + source)
+        Path(name).chmod(0o755)
+        os.replace(name, command)
+    finally:
+        Path(name).unlink(missing_ok=True)
+    return True
+
+
 def main():
     if not sys.stdin.isatty():
         raise SetupError('Run make configure-pi in an interactive terminal.')
@@ -24,10 +51,12 @@ def main():
         saved = read_config(env)
     except ValueError as error:
         raise SetupError(str(error)) from None
-    print('Pi Responses setup. Secret inputs are hidden. Enter keeps saved values.')
-    def ask(label, key, default='', secret=False):
+    print('Pi Responses setup. Enter keeps displayed connection settings. Re-enter user and Bearer values; inputs are hidden.')
+    def ask(label, key, default='', secret=False, show_default=False):
         previous = saved.get(key, env.get(key, default))
-        prompt = label + (' [saved/default]' if secret and previous else f' [{previous}]' if previous else '') + ': '
+        if secret and key in ('INTERNAL_AI_USER', 'INTERNAL_AI_API_KEY'):
+            previous = ''
+        prompt = label + (' [saved value hidden; Enter keeps it]' if secret and previous and not show_default else f' [{previous}]' if previous else '') + ': '
         value = getpass.getpass(prompt) if secret else input(prompt)
         return value if value else previous
     print('Base URL example: https://ai.example/v1')
@@ -40,7 +69,9 @@ def main():
     allow_http = False
     if url.scheme == 'http' and url.hostname not in ('localhost', '127.0.0.1', '::1'):
         print('HTTP sends the user header and Bearer token without TLS encryption.')
-        allow_http = input('Allow HTTP for this internal endpoint? [y/N]: ').strip().lower() in ('y', 'yes')
+        remembered = saved.get('INTERNAL_AI_ALLOW_HTTP') == '1' and saved.get('INTERNAL_AI_BASE_URL') == base
+        choice = input('Allow HTTP for this internal endpoint? ' + ('[Y/n]: ' if remembered else '[y/N]: ')).strip().lower()
+        allow_http = remembered if not choice else choice in ('y', 'yes')
         if not allow_http:
             raise SetupError('HTTP was not enabled. Use HTTPS or explicitly allow the internal HTTP endpoint.')
     if url.path.endswith(('/responses', '/chat/completions')):
@@ -66,22 +97,30 @@ def main():
     print('Optional network settings. Enter inherits the environment unless a saved value exists; - clears a saved value.')
     for label, key in [('HTTPS proxy', 'HTTPS_PROXY'), ('HTTP proxy', 'HTTP_PROXY'),
                        ('No-proxy hosts', 'NO_PROXY'), ('Additional CA PEM file', 'NODE_EXTRA_CA_CERTS')]:
-        value = ask(label, key, secret=key.endswith('PROXY') and key != 'NO_PROXY')
+        is_proxy = key in ('HTTP_PROXY', 'HTTPS_PROXY')
+        previous = saved.get(key, env.get(key, ''))
+        show_proxy = is_proxy and '@' not in previous
+        value = ask(label, key, secret=is_proxy, show_default=show_proxy)
         if value and value != '-':
             if key == 'NODE_EXTRA_CA_CERTS' and not Path(value).expanduser().is_file():
                 raise SetupError('Additional CA file does not exist.')
             data[key] = str(Path(value).expanduser()) if key == 'NODE_EXTRA_CA_CERTS' else value
     try:
-        save_config(env, data)
+        saved_path = save_config(env, data)
     except ValueError as error:
         raise SetupError(str(error)) from None
     print('Saved private connection settings (directory 700, file 600). No network request sent.')
+    print('Settings file: ' + str(saved_path))
     prefix = Path(env.get('EDITOR_PREFIX') or Path.home() / '.local').expanduser()
     command = prefix / 'bin/pi'
     print('Start Pi with: ' + str(command) + ' (or add this bin directory to PATH).')
-    if command.is_file():
+    if refresh_runtime(prefix):
+        print('Updated the managed Pi launcher and connection helpers from this checkout (no downloads).')
         check_env = {k: v for k, v in env.items() if not k.startswith('INTERNAL_AI_')}
-        return subprocess.call([str(command), '--doctor'], env=check_env)
+        result = subprocess.call([str(command), '--doctor'], env=check_env)
+        if result:
+            print('Connection settings were saved, but the local diagnostic failed. No API request was sent. Run make doctor-pi; if the runtime is incomplete, run make setup-pi.', file=sys.stderr)
+        return result
     print('Run make setup-pi, then make doctor-pi. Add the prefix bin directory to PATH if needed.')
     return 0
 

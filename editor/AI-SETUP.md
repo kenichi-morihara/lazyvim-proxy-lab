@@ -13,8 +13,14 @@ Piの導入後、接続先ベースURL・モデル・独自userヘッダー名�
 Bearerは`Bearer `を付けずに入力します（付けた場合も取り除きます）。
 必要ならproxy・NO_PROXY・追加CAファイルも設定できます。通常の`make`には影響しません。
 秘密値は非表示入力で、`~/.config/editor-pi/connection.json`に保存します。
-`XDG_CONFIG_HOME`設定時はその配下です。ディレクトリ0700、ファイル0600で、Gitリポジトリ内への保存は拒否します。
-既存設定の更新は`make configure-pi`。Enterで既存値を保持します。
+`XDG_CONFIG_HOME`設定時はその配下です。ただしGitリポジトリ内の場合は、
+Git管理外の`XDG_STATE_HOME/editor-pi/connection.json`（通常`~/.local/state/editor-pi/connection.json`）へ自動的に切り替えます。
+実際の保存先は設定完了時に表示します。ディレクトリ0700、ファイル0600です。
+既存設定の更新は`make config`（`make configure-pi`も利用可能）。
+URL・モデル・ヘッダー名・ネットワーク設定は表示され、Enterで既存値を保持します。
+同じURLのHTTP許可も保持します。user値・Bearerは設定変更時に毎回非表示で再入力します。
+認証情報入りproxy URLは表示しません。保存した認証情報はPi起動時に使用します。
+`git pull`後の設定変更時には、導入済みの管理対象ランチャーと接続ヘルパーも更新します（npm再取得なし）。
 proxy等の任意設定は`-`で保存値を解除できます。環境変数による指定は保存値より優先されます。
 
 最後にローカル設定診断を行います。設定時にはAPIへ通信しません。

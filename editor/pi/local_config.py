@@ -12,8 +12,22 @@ FIELDS = {
 }
 
 
+def inside_git(directory):
+    directory = directory.resolve()
+    return any((parent / '.git').exists() for parent in (directory, *directory.parents))
+
+
 def config_path(env):
-    return Path(env.get('XDG_CONFIG_HOME') or Path(env.get('HOME', str(Path.home()))) / '.config') / 'editor-pi' / 'connection.json'
+    home = Path(env.get('HOME', str(Path.home())))
+    preferred = Path(env.get('XDG_CONFIG_HOME') or home / '.config') / 'editor-pi' / 'connection.json'
+    if not inside_git(preferred.parent):
+        return preferred
+    # A dotfiles checkout is a common XDG_CONFIG_HOME. Keep connection secrets outside it.
+    for state in (Path(env.get('XDG_STATE_HOME') or home / '.local/state'), home / '.local/state'):
+        alternative = state / 'editor-pi' / 'connection.json'
+        if not inside_git(alternative.parent):
+            return alternative
+    raise ValueError('Set XDG_STATE_HOME to a private directory outside the Git checkout.')
 
 
 def private_file(path):

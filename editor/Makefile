@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := install
 
 OPTIONAL_TARGETS := setup-pi configure-pi doctor-pi setup-tailscale
-.PHONY: help install doctor init-pi $(OPTIONAL_TARGETS)
+.PHONY: help install doctor init-pi config $(OPTIONAL_TARGETS)
 
 help:
 	@printf '%s\n' 'Editor:' \
@@ -9,7 +9,7 @@ help:
 	  '  make doctor                  Check editor prerequisites without installing' \
 	  '' 'Pi (optional, Responses by default):' \
 	  '  make init-pi                 Install Pi, then interactively save connection settings' \
-	  '  make configure-pi            Update saved connection settings' \
+	  '  make config                  Update saved connection settings' \
 	  '  make doctor-pi               Check Pi configuration without network requests' \
 	  '  make doctor-pi PROBE=1       Probe the API tool protocol without executing tools' \
 	  '  make setup-pi                Install/reinstall Pi without changing connection settings' \
@@ -30,3 +30,6 @@ init-pi: setup-pi
 # None of these are dependencies of the normal editor installation.
 $(OPTIONAL_TARGETS):
 	@./scripts/_run-installer $@
+
+# Short name for connection-only configuration.
+config: configure-pi
