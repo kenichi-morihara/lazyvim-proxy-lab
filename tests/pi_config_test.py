@@ -29,7 +29,9 @@ class ConfigTests(unittest.TestCase):
             self.assertEqual(loaded['INTERNAL_AI_MODEL'], 'override')
             legacy = config.load_config(dict(env, INTERNAL_AI_TRANSPORT='company-chat'))
             self.assertNotIn('INTERNAL_AI_API_KEY', legacy)
-            self.assertEqual(legacy['HTTPS_PROXY'], data['HTTPS_PROXY'])
+            self.assertNotIn('HTTPS_PROXY', legacy)
+            inherited = config.load_config(dict(env, HTTPS_PROXY='http://environment-proxy.example:8080'))
+            self.assertEqual(inherited['HTTPS_PROXY'], 'http://environment-proxy.example:8080')
             path.chmod(0o644)
             with self.assertRaises(ValueError):
                 config.read_config(env)
@@ -50,6 +52,19 @@ class ConfigTests(unittest.TestCase):
             (root / '.git').mkdir()
             with self.assertRaises(ValueError):
                 config.save_config({'HOME': str(root), 'XDG_CONFIG_HOME': str(root / 'another')}, {})
+
+    def test_saved_network_fields_are_ignored_and_removed_on_save(self):
+        import json
+        with tempfile.TemporaryDirectory() as directory:
+            env = {'HOME': directory}
+            path = config.save_config(env, {'INTERNAL_AI_MODEL': 'saved-model'})
+            path.write_text(json.dumps({'INTERNAL_AI_MODEL': 'saved-model', 'HTTPS_PROXY': 'http://old-proxy.example',
+                                        'NODE_EXTRA_CA_CERTS': '/nonexistent/old-ca.pem'}))
+            loaded = config.load_config(dict(env))
+            self.assertNotIn('HTTPS_PROXY', loaded)
+            self.assertNotIn('NODE_EXTRA_CA_CERTS', loaded)
+            config.save_config(env, config.read_config(env))
+            self.assertNotIn('HTTPS_PROXY', json.loads(path.read_text()))
 
     def test_config_home_in_dotfiles_uses_private_state_directory(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -82,16 +97,16 @@ class ConfigTests(unittest.TestCase):
         wizard = runpy.run_path(str(ROOT / 'editor/scripts/configure-pi'))
         with tempfile.TemporaryDirectory() as directory:
             with patch.dict(os.environ, {'HOME': directory}, clear=True), patch('sys.stdin.isatty', return_value=True), \
-                 patch('builtins.input', side_effect=['http://10.0.0.2/v1', 'y', '', 'X-User', '', '']), \
-                 patch('getpass.getpass', side_effect=['private-user', 'private-token', '', '']), \
+                 patch('builtins.input', side_effect=['http://10.0.0.2/v1', 'y', '', 'X-User']), \
+                 patch('getpass.getpass', side_effect=['private-user', 'private-token']), \
                  contextlib.redirect_stdout(io.StringIO()):
                 self.assertEqual(wizard['main'](), 0)
             data = config.read_config({'HOME': directory})
             self.assertEqual(data['INTERNAL_AI_ALLOW_HTTP'], '1')
             self.assertEqual(data['INTERNAL_AI_BASE_URL'], 'http://10.0.0.2/v1')
             with patch.dict(os.environ, {'HOME': directory}, clear=True), patch('sys.stdin.isatty', return_value=True), \
-                 patch('builtins.input', side_effect=['', '', '', '', '', '']) as prompts, \
-                 patch('getpass.getpass', side_effect=['new-user', 'new-token', '', '']), \
+                 patch('builtins.input', side_effect=['', '', '', '']) as prompts, \
+                 patch('getpass.getpass', side_effect=['new-user', 'new-token']), \
                  contextlib.redirect_stdout(io.StringIO()):
                 self.assertEqual(wizard['main'](), 0)
             data = config.read_config({'HOME': directory})
@@ -108,8 +123,8 @@ class ConfigTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             output = io.StringIO()
             with patch.dict(os.environ, {'HOME': directory}, clear=True), patch('sys.stdin.isatty', return_value=True), \
-                 patch('builtins.input', side_effect=['https://ai.example/v1', '', 'X-User', '', '']), \
-                 patch.object(wizard.getpass, 'getpass', side_effect=['private-user', 'Bearer private-token', '', '']), \
+                 patch('builtins.input', side_effect=['https://ai.example/v1', '', 'X-User']), \
+                 patch.object(wizard.getpass, 'getpass', side_effect=['private-user', 'Bearer private-token']), \
                  contextlib.redirect_stdout(output):
                 self.assertEqual(wizard.main(), 0)
             data = config.read_config({'HOME': directory})

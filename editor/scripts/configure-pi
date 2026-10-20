@@ -52,11 +52,11 @@ def main():
     except ValueError as error:
         raise SetupError(str(error)) from None
     print('Pi Responses setup. Enter keeps displayed connection settings. Re-enter user and Bearer values; inputs are hidden.')
-    def ask(label, key, default='', secret=False, show_default=False):
+    def ask(label, key, default='', secret=False):
         previous = saved.get(key, env.get(key, default))
         if secret and key in ('INTERNAL_AI_USER', 'INTERNAL_AI_API_KEY'):
             previous = ''
-        prompt = label + (' [saved value hidden; Enter keeps it]' if secret and previous and not show_default else f' [{previous}]' if previous else '') + ': '
+        prompt = label + (' [saved value hidden; Enter keeps it]' if secret and previous else f' [{previous}]' if previous else '') + ': '
         value = getpass.getpass(prompt) if secret else input(prompt)
         return value if value else previous
     print('Base URL example: https://ai.example/v1')
@@ -94,17 +94,6 @@ def main():
                 INTERNAL_AI_API_KEY=token, INTERNAL_AI_AUTH_HEADER='Authorization')
     if allow_http:
         data['INTERNAL_AI_ALLOW_HTTP'] = '1'
-    print('Optional network settings. Enter inherits the environment unless a saved value exists; - clears a saved value.')
-    for label, key in [('HTTPS proxy', 'HTTPS_PROXY'), ('HTTP proxy', 'HTTP_PROXY'),
-                       ('No-proxy hosts', 'NO_PROXY'), ('Additional CA PEM file', 'NODE_EXTRA_CA_CERTS')]:
-        is_proxy = key in ('HTTP_PROXY', 'HTTPS_PROXY')
-        previous = saved.get(key, env.get(key, ''))
-        show_proxy = is_proxy and '@' not in previous
-        value = ask(label, key, secret=is_proxy, show_default=show_proxy)
-        if value and value != '-':
-            if key == 'NODE_EXTRA_CA_CERTS' and not Path(value).expanduser().is_file():
-                raise SetupError('Additional CA file does not exist.')
-            data[key] = str(Path(value).expanduser()) if key == 'NODE_EXTRA_CA_CERTS' else value
     try:
         saved_path = save_config(env, data)
     except ValueError as error:

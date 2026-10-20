@@ -8,9 +8,10 @@ import tempfile
 FIELDS = {
     'INTERNAL_AI_ALLOW_HTTP', 'INTERNAL_AI_TRANSPORT', 'INTERNAL_AI_API', 'INTERNAL_AI_BASE_URL', 'INTERNAL_AI_MODEL',
     'INTERNAL_AI_USER_HEADER', 'INTERNAL_AI_USER', 'INTERNAL_AI_API_KEY', 'INTERNAL_AI_AUTH_HEADER',
-    'HTTPS_PROXY', 'HTTP_PROXY', 'NO_PROXY', 'NODE_EXTRA_CA_CERTS',
 }
 
+
+LEGACY_NETWORK_FIELDS = {'HTTPS_PROXY', 'HTTP_PROXY', 'NO_PROXY', 'NODE_EXTRA_CA_CERTS'}
 
 def inside_git(directory):
     directory = directory.resolve()
@@ -45,9 +46,9 @@ def read_config(env):
         data = json.loads(path.read_text())
     except (ValueError, UnicodeError):
         raise ValueError('Invalid Pi connection file; run make configure-pi.') from None
-    if not isinstance(data, dict) or any(k not in FIELDS or not isinstance(v, str) or '\0' in v for k, v in data.items()):
+    if not isinstance(data, dict) or any(k not in FIELDS | LEGACY_NETWORK_FIELDS or not isinstance(v, str) or '\0' in v for k, v in data.items()):
         raise ValueError('Invalid Pi connection settings; run make configure-pi.')
-    return data
+    return {k: v for k, v in data.items() if k in FIELDS}
 
 
 def load_config(env):
@@ -77,7 +78,7 @@ def save_config(env, data):
     fd, name = tempfile.mkstemp(prefix='.connection-', dir=path.parent)
     try:
         with os.fdopen(fd, 'w') as stream:
-            json.dump(data, stream)
+            json.dump({k: v for k, v in data.items() if k in FIELDS}, stream)
             stream.write('\n')
         os.replace(name, path)
     finally:
