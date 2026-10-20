@@ -81,6 +81,15 @@ export function responsesStream(model, context, options = {}) {
 
 export default function (pi) {
   const env = process.env;
+  pi.registerCommand('ai-headers', {
+    description: 'Reveal actual request authentication headers on screen only (not saved in chat)',
+    async handler(_args, ctx) {
+      const header = env.INTERNAL_AI_AUTH_HEADER || 'Authorization';
+      const lines = [`${env.INTERNAL_AI_USER_HEADER || 'user'}: ${env.INTERNAL_AI_USER}`];
+      if (env.INTERNAL_AI_API_KEY) lines.push(`${header}: ${header.toLowerCase() === 'authorization' ? 'Bearer ' : ''}${env.INTERNAL_AI_API_KEY}`);
+      ctx.ui.notify(lines.join('\n'), 'info');
+    },
+  });
   pi.registerCommand('ai-status', {
     description: 'Show configured model, Responses endpoint and the last failure (secrets hidden)',
     async handler() {
