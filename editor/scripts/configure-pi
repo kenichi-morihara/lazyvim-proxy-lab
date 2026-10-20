@@ -23,7 +23,10 @@ def main():
         prompt = label + (' [saved/default]' if secret and previous else f' [{previous}]' if previous else '') + ': '
         value = getpass.getpass(prompt) if secret else input(prompt)
         return value if value else previous
-    base = ask('API base URL (without /responses)', 'INTERNAL_AI_BASE_URL').rstrip('/')
+    print('Base URL example: https://ai.example/v1')
+    print('If the endpoint is https://ai.example/v1/responses, enter https://ai.example/v1.')
+    print('Keep any service-specific path prefix; omit only the final /responses. No default URL is selected.')
+    base = ask('API base URL (example: https://ai.example/v1)', 'INTERNAL_AI_BASE_URL').rstrip('/')
     url = urlsplit(base)
     if url.scheme not in ('https', 'http') or not url.hostname or url.username or url.password or url.query or url.fragment:
         raise ValueError('Enter a base URL without credentials, query or fragment.')
